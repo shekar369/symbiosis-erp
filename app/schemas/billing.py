@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Annotated
 from datetime import datetime
-from pydantic import BaseModel, condecimal
+from pydantic import BaseModel, Field
 from decimal import Decimal
 
 
@@ -28,9 +28,9 @@ class PlanFeature(BaseModel):
 class SubscriptionPlanBase(BaseModel):
     name: str
     description: str
-    price_monthly: condecimal(max_digits=10, decimal_places=2)
-    price_quarterly: condecimal(max_digits=10, decimal_places=2)
-    price_annual: condecimal(max_digits=10, decimal_places=2)
+    price_monthly: Annotated[Decimal, Field(max_digits=10, decimal_places=2)]
+    price_quarterly: Annotated[Decimal, Field(max_digits=10, decimal_places=2)]
+    price_annual: Annotated[Decimal, Field(max_digits=10, decimal_places=2)]
     max_employees: int
     features: List[PlanFeature]
     is_active: bool = True
@@ -97,7 +97,7 @@ class SubscriptionResponse(SubscriptionBase):
 class BillingInvoiceBase(BaseModel):
     tenant_id: int
     subscription_id: int
-    amount: condecimal(max_digits=10, decimal_places=2)
+    amount: Annotated[Decimal, Field(max_digits=10, decimal_places=2)]
     currency: str = "USD"
     description: str
     due_date: datetime

@@ -93,10 +93,6 @@ class EmployeeLocationAssignmentResponse(EmployeeLocationAssignmentBase):
     id: int
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
-    created_at: datetime
     location: Optional[LocationResponse] = None
 
     class Config:

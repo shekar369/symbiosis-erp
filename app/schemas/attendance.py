@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import date, time, datetime
-from typing import Optional
+from typing import Optional, List, Dict
 
 
 class AttendanceBase(BaseModel):
@@ -39,6 +39,9 @@ class AttendanceUploadResponse(BaseModel):
     failed_records: int
     status: str
     uploaded_at: datetime
+    errors: Optional[List[str]] = []
+    warnings: Optional[List[str]] = []
+    metadata: Optional[Dict] = {}
 
     class Config:
         from_attributes = True

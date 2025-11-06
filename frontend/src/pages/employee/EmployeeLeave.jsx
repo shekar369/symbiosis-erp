@@ -46,7 +46,7 @@ const EmployeeLeave = () => {
 
       // Fetch leave types
       try {
-        const typesResponse = await api.get('/leave/types');
+        const typesResponse = await api.get('/leaves/types');
         setLeaveTypes(typesResponse.data);
       } catch (error) {
         console.log('Leave types not available');
@@ -54,7 +54,7 @@ const EmployeeLeave = () => {
 
       // Fetch leave balance
       try {
-        const balanceResponse = await api.get(`/leave/balance/${employeeId}`);
+        const balanceResponse = await api.get(`/leaves/balance/${employeeId}`);
         setLeaveBalance(balanceResponse.data);
       } catch (error) {
         console.log('Leave balance not available');
@@ -73,7 +73,7 @@ const EmployeeLeave = () => {
 
   const fetchLeaveRequests = async (employeeId) => {
     try {
-      const response = await api.get('/leave/requests', {
+      const response = await api.get('/leaves/requests', {
         params: { employee_id: employeeId }
       });
       setLeaveRequests(response.data || []);
@@ -118,7 +118,7 @@ const EmployeeLeave = () => {
     try {
       setSubmitting(true);
 
-      await api.post('/leave/requests', {
+      await api.post('/leaves/requests', {
         employee_id: employeeData.id,
         leave_type_id: parseInt(formData.leave_type_id),
         start_date: formData.start_date,
@@ -138,7 +138,7 @@ const EmployeeLeave = () => {
 
       // Refresh data
       await fetchLeaveRequests(employeeData.id);
-      const balanceResponse = await api.get(`/leave/balance/${employeeData.id}`);
+      const balanceResponse = await api.get(`/leaves/balance/${employeeData.id}`);
       setLeaveBalance(balanceResponse.data);
 
       setActiveTab('my-leaves');
@@ -154,12 +154,12 @@ const EmployeeLeave = () => {
     if (!leaveToCancel) return;
 
     try {
-      await api.delete(`/leave/requests/${leaveToCancel.id}`);
+      await api.delete(`/leaves/requests/${leaveToCancel.id}`);
       alert('Leave request cancelled successfully');
 
       // Refresh data
       await fetchLeaveRequests(employeeData.id);
-      const balanceResponse = await api.get(`/leave/balance/${employeeData.id}`);
+      const balanceResponse = await api.get(`/leaves/balance/${employeeData.id}`);
       setLeaveBalance(balanceResponse.data);
 
       setShowCancelModal(false);

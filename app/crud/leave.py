@@ -4,7 +4,7 @@ from datetime import date
 
 from app.crud.base import CRUDBase
 from app.models.leave import LeaveRequest, LeaveBalance, LeaveType
-from app.schemas.leave import LeaveRequestCreate, LeaveRequestUpdate
+from app.schemas.leave import LeaveRequestCreate, LeaveRequestUpdate, LeaveTypeCreate, LeaveTypeUpdate
 
 
 class CRUDLeaveRequest(CRUDBase[LeaveRequest, LeaveRequestCreate, LeaveRequestUpdate]):
@@ -127,9 +127,66 @@ class CRUDLeaveBalance(CRUDBase[LeaveBalance, dict, dict]):
         return balance
 
 
-class CRUDLeaveType(CRUDBase[LeaveType, dict, dict]):
-    def get_active(self, db: Session) -> List[LeaveType]:
-        return db.query(LeaveType).filter(LeaveType.is_active == True).all()
+class CRUDLeaveType(CRUDBase[LeaveType, LeaveTypeCreate, LeaveTypeUpdate]):
+    def get_active(self, db: Session, tenant_id: int) -> List[LeaveType]:
+        return db.query(LeaveType).filter(
+            LeaveType.tenant_id == tenant_id,
+            LeaveType.is_active == True
+        ).all()
+
+    def get_all(self, db: Session, tenant_id: int) -> List[LeaveType]:
+        return db.query(LeaveType).filter(LeaveType.tenant_id == tenant_id).all()
+
+    def get_by_id(self, db: Session, leave_type_id: int, tenant_id: int) -> Optional[LeaveType]:
+        return db.query(LeaveType).filter(
+            LeaveType.id == leave_type_id,
+            LeaveType.tenant_id == tenant_id
+        ).first()
+
+    def get_by_code(self, db: Session, code: str, tenant_id: int) -> Optional[LeaveType]:
+        return db.query(LeaveType).filter(
+            LeaveType.code == code,
+            LeaveType.tenant_id == tenant_id
+        ).first()
+
+    def create(self, db: Session, leave_type: LeaveTypeCreate, tenant_id: int) -> LeaveType:
+        db_leave_type = LeaveType(
+            tenant_id=tenant_id,
+            name=leave_type.name,
+            code=leave_type.code,
+            days_per_year=leave_type.days_per_year,
+            is_paid=leave_type.is_paid,
+            carry_forward=leave_type.carry_forward,
+            max_carry_forward_days=leave_type.max_carry_forward_days,
+            description=leave_type.description
+        )
+        db.add(db_leave_type)
+        db.commit()
+        db.refresh(db_leave_type)
+        return db_leave_type
+
+    def update(self, db: Session, leave_type_id: int, leave_type_update: LeaveTypeUpdate, tenant_id: int) -> Optional[LeaveType]:
+        db_leave_type = self.get_by_id(db, leave_type_id, tenant_id)
+        if not db_leave_type:
+            return None
+
+        update_data = leave_type_update.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_leave_type, field, value)
+
+        db.commit()
+        db.refresh(db_leave_type)
+        return db_leave_type
+
+    def delete(self, db: Session, leave_type_id: int, tenant_id: int) -> bool:
+        db_leave_type = self.get_by_id(db, leave_type_id, tenant_id)
+        if not db_leave_type:
+            return False
+
+        # Soft delete - set is_active to False
+        db_leave_type.is_active = False
+        db.commit()
+        return True
 
 
 leave_request = CRUDLeaveRequest(LeaveRequest)

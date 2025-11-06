@@ -21,6 +21,7 @@ from app.api.v1.endpoints import (
     config,
     registration,
     billing,
+    bank,
 )
 
 api_router = APIRouter()
@@ -31,6 +32,7 @@ api_router.include_router(registration.router, prefix="/registration", tags=["re
 api_router.include_router(billing.router, prefix="/billing", tags=["billing"])
 api_router.include_router(tenants.router, prefix="/tenants", tags=["tenants"])
 api_router.include_router(employees.router, prefix="/employees", tags=["employees"])
+api_router.include_router(bank.router, prefix="/bank", tags=["bank"])
 api_router.include_router(locations.router, prefix="/locations", tags=["locations"])
 api_router.include_router(templates.router, prefix="/templates", tags=["templates"])
 api_router.include_router(uploads.router, prefix="/uploads", tags=["uploads"])

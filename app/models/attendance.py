@@ -11,6 +11,8 @@ class AttendanceStatus(str, enum.Enum):
     ABSENT = "absent"
     HALF_DAY = "half_day"
     LEAVE = "leave"
+    WEEKLY_OFF = "weekly_off"
+    HOLIDAY = "holiday"
 
 
 class Attendance(Base):

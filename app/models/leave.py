@@ -18,10 +18,15 @@ class LeaveType(Base):
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
     name = Column(String, nullable=False)
-    code = Column(String, unique=True, nullable=False)
-    days_per_year = Column(Float)
-    is_paid = Column(Integer, default=1)
+    code = Column(String, unique=True, nullable=False, index=True)
+    days_per_year = Column(Float, nullable=False)  # max days per year
+    is_paid = Column(Integer, default=1)  # 1 = paid, 0 = unpaid
+    carry_forward = Column(Integer, default=0)  # 1 = yes, 0 = no
+    max_carry_forward_days = Column(Float, default=0)
+    is_active = Column(Integer, default=1)  # 1 = active, 0 = inactive
+    description = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class LeaveBalance(Base):

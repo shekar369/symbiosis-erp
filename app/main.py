@@ -19,7 +19,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
-    description="HR Payroll System API",
+    description="Symbiosis HR Payroll System API",
     openapi_url="/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -46,4 +46,4 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():
-    return {"message": "HR Payroll API", "version": "1.0.0"}
+    return {"message": "Symbiosis HR Payroll API", "version": "1.0.0"}

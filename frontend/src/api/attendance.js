@@ -25,4 +25,25 @@ export const attendanceAPI = {
     });
     return response.data;
   },
+
+  getTemplateInfo: async (month, year) => {
+    const response = await axios.get(`/attendance/template/info?month=${month}&year=${year}`);
+    return response.data;
+  },
+
+  downloadTemplate: async (month, year) => {
+    const response = await axios.get(`/attendance/template/download?month=${month}&year=${year}`, {
+      responseType: 'blob',
+    });
+
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `attendance_template_${year}_${month.toString().padStart(2, '0')}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };

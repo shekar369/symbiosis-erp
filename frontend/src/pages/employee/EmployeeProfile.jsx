@@ -16,13 +16,18 @@ import api from '../../services/api';
 
 const EmployeeProfile = () => {
   const [employeeData, setEmployeeData] = useState(null);
+  const [bankDetails, setBankDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [editingBank, setEditingBank] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingBank, setSavingBank] = useState(false);
   const [formData, setFormData] = useState({});
+  const [bankFormData, setBankFormData] = useState({});
 
   useEffect(() => {
     fetchEmployeeData();
+    fetchBankDetails();
   }, []);
 
   const fetchEmployeeData = async () => {
@@ -31,12 +36,10 @@ const EmployeeProfile = () => {
       const response = await api.get('/employees/me');
       setEmployeeData(response.data);
       setFormData({
-        email: response.data.email || '',
+        first_name: response.data.first_name || '',
+        last_name: response.data.last_name || '',
         phone: response.data.phone || '',
-        address: response.data.address || '',
-        city: response.data.city || '',
-        state: response.data.state || '',
-        pincode: response.data.pincode || ''
+        date_of_birth: response.data.date_of_birth || ''
       });
     } catch (error) {
       console.error('Error fetching employee data:', error);
@@ -46,16 +49,50 @@ const EmployeeProfile = () => {
     }
   };
 
+  const fetchBankDetails = async () => {
+    try {
+      const response = await api.get('/bank/my-bank-details');
+      setBankDetails(response.data);
+      setBankFormData({
+        account_holder_name: response.data.account_holder_name || '',
+        account_number: response.data.account_number || '',
+        bank_name: response.data.bank_name || '',
+        branch_name: response.data.branch_name || '',
+        ifsc_code: response.data.ifsc_code || '',
+        account_type: response.data.account_type || '',
+        pan_number: response.data.pan_number || ''
+      });
+    } catch (error) {
+      console.error('Error fetching bank details:', error);
+      // It's okay if bank details don't exist yet
+      setBankDetails(null);
+      setBankFormData({
+        account_holder_name: '',
+        account_number: '',
+        bank_name: '',
+        branch_name: '',
+        ifsc_code: '',
+        account_type: 'savings',
+        pan_number: ''
+      });
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+  };
+
+  const handleBankInputChange = (e) => {
+    const { name, value } = e.target;
+    setBankFormData({ ...bankFormData, [name]: value });
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
 
-      await api.put(`/employees/${employeeData.id}`, formData);
+      await api.put('/employees/me/profile', formData);
 
       alert('Profile updated successfully!');
       await fetchEmployeeData();
@@ -68,16 +105,52 @@ const EmployeeProfile = () => {
     }
   };
 
+  const handleSaveBank = async () => {
+    try {
+      setSavingBank(true);
+
+      if (bankDetails) {
+        // Update existing bank details
+        await api.put('/bank/my-bank-details', bankFormData);
+      } else {
+        // Create new bank details
+        await api.post('/bank/my-bank-details', bankFormData);
+      }
+
+      alert('Bank details updated successfully!');
+      await fetchBankDetails();
+      setEditingBank(false);
+    } catch (error) {
+      console.error('Error updating bank details:', error);
+      alert(error.response?.data?.detail || 'Failed to update bank details');
+    } finally {
+      setSavingBank(false);
+    }
+  };
+
   const handleCancel = () => {
     setFormData({
-      email: employeeData.email || '',
+      first_name: employeeData.first_name || '',
+      last_name: employeeData.last_name || '',
       phone: employeeData.phone || '',
-      address: employeeData.address || '',
-      city: employeeData.city || '',
-      state: employeeData.state || '',
-      pincode: employeeData.pincode || ''
+      date_of_birth: employeeData.date_of_birth || ''
     });
     setEditing(false);
+  };
+
+  const handleCancelBank = () => {
+    if (bankDetails) {
+      setBankFormData({
+        account_holder_name: bankDetails.account_holder_name || '',
+        account_number: bankDetails.account_number || '',
+        bank_name: bankDetails.bank_name || '',
+        branch_name: bankDetails.branch_name || '',
+        ifsc_code: bankDetails.ifsc_code || '',
+        account_type: bankDetails.account_type || '',
+        pan_number: bankDetails.pan_number || ''
+      });
+    }
+    setEditingBank(false);
   };
 
   const formatDate = (dateString) => {
@@ -189,21 +262,51 @@ const EmployeeProfile = () => {
                     <User className="w-4 h-4 mr-2" />
                     First Name
                   </label>
-                  <p className="mt-1 text-gray-900 font-medium">{employeeData?.first_name}</p>
+                  {editing ? (
+                    <input
+                      type="text"
+                      name="first_name"
+                      value={formData.first_name}
+                      onChange={handleInputChange}
+                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <p className="mt-1 text-gray-900 font-medium">{employeeData?.first_name}</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 flex items-center">
                     <User className="w-4 h-4 mr-2" />
                     Last Name
                   </label>
-                  <p className="mt-1 text-gray-900 font-medium">{employeeData?.last_name}</p>
+                  {editing ? (
+                    <input
+                      type="text"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleInputChange}
+                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <p className="mt-1 text-gray-900 font-medium">{employeeData?.last_name}</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 flex items-center">
                     <Calendar className="w-4 h-4 mr-2" />
                     Date of Birth
                   </label>
-                  <p className="mt-1 text-gray-900 font-medium">{formatDate(employeeData?.date_of_birth)}</p>
+                  {editing ? (
+                    <input
+                      type="date"
+                      name="date_of_birth"
+                      value={formData.date_of_birth}
+                      onChange={handleInputChange}
+                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <p className="mt-1 text-gray-900 font-medium">{formatDate(employeeData?.date_of_birth)}</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 flex items-center">
@@ -227,17 +330,7 @@ const EmployeeProfile = () => {
                   <Mail className="w-4 h-4 mr-2" />
                   Email Address
                 </label>
-                {editing ? (
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <p className="mt-1 text-gray-900 font-medium">{employeeData?.email || '-'}</p>
-                )}
+                <p className="mt-1 text-gray-900 font-medium">{employeeData?.email || '-'}</p>
               </div>
 
               <div>
@@ -257,109 +350,180 @@ const EmployeeProfile = () => {
                   <p className="mt-1 text-gray-900 font-medium">{employeeData?.phone || '-'}</p>
                 )}
               </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-600 flex items-center">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Address
-                </label>
-                {editing ? (
-                  <textarea
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <p className="mt-1 text-gray-900 font-medium">{employeeData?.address || '-'}</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-600">City</label>
-                  {editing ? (
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="mt-1 text-gray-900 font-medium">{employeeData?.city || '-'}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">State</label>
-                  {editing ? (
-                    <input
-                      type="text"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="mt-1 text-gray-900 font-medium">{employeeData?.state || '-'}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Pincode</label>
-                  {editing ? (
-                    <input
-                      type="text"
-                      name="pincode"
-                      value={formData.pincode}
-                      onChange={handleInputChange}
-                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  ) : (
-                    <p className="mt-1 text-gray-900 font-medium">{employeeData?.pincode || '-'}</p>
-                  )}
-                </div>
-              </div>
             </div>
           </div>
 
           {/* Bank Details */}
           <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-900">Bank Account Details</h3>
+              {!editingBank && !editing ? (
+                <button
+                  onClick={() => setEditingBank(true)}
+                  className="flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                >
+                  <Edit className="w-3 h-3 mr-1.5" />
+                  {bankDetails ? 'Edit' : 'Add'}
+                </button>
+              ) : editingBank ? (
+                <div className="flex space-x-2">
+                  <button
+                    onClick={handleCancelBank}
+                    className="flex items-center px-3 py-1.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm"
+                  >
+                    <X className="w-3 h-3 mr-1.5" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveBank}
+                    disabled={savingBank}
+                    className="flex items-center px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 text-sm"
+                  >
+                    {savingBank ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1.5"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-3 h-3 mr-1.5" />
+                        Save
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : null}
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="text-sm font-medium text-gray-600 flex items-center">
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Account Number
+                    <User className="w-4 h-4 mr-2" />
+                    Account Holder Name
                   </label>
-                  <p className="mt-1 text-gray-900 font-medium font-mono">
-                    {employeeData?.bank_account_number ?
-                      `XXXX${employeeData.bank_account_number.slice(-4)}` : '-'}
-                  </p>
+                  {editingBank ? (
+                    <input
+                      type="text"
+                      name="account_holder_name"
+                      value={bankFormData.account_holder_name}
+                      onChange={handleBankInputChange}
+                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  ) : (
+                    <p className="mt-1 text-gray-900 font-medium">{bankDetails?.account_holder_name || '-'}</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 flex items-center">
-                    <Building className="w-4 h-4 mr-2" />
-                    IFSC Code
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Account Number
                   </label>
-                  <p className="mt-1 text-gray-900 font-medium font-mono">{employeeData?.ifsc_code || '-'}</p>
+                  {editingBank ? (
+                    <input
+                      type="text"
+                      name="account_number"
+                      value={bankFormData.account_number}
+                      onChange={handleBankInputChange}
+                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  ) : (
+                    <p className="mt-1 text-gray-900 font-medium font-mono">
+                      {bankDetails?.account_number ?
+                        `XXXX${bankDetails.account_number.slice(-4)}` : '-'}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 flex items-center">
                     <Building className="w-4 h-4 mr-2" />
                     Bank Name
                   </label>
-                  <p className="mt-1 text-gray-900 font-medium">{employeeData?.bank_name || '-'}</p>
+                  {editingBank ? (
+                    <input
+                      type="text"
+                      name="bank_name"
+                      value={bankFormData.bank_name}
+                      onChange={handleBankInputChange}
+                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  ) : (
+                    <p className="mt-1 text-gray-900 font-medium">{bankDetails?.bank_name || '-'}</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 flex items-center">
                     <Building className="w-4 h-4 mr-2" />
-                    Branch
+                    Branch Name
                   </label>
-                  <p className="mt-1 text-gray-900 font-medium">{employeeData?.bank_branch || '-'}</p>
+                  {editingBank ? (
+                    <input
+                      type="text"
+                      name="branch_name"
+                      value={bankFormData.branch_name}
+                      onChange={handleBankInputChange}
+                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <p className="mt-1 text-gray-900 font-medium">{bankDetails?.branch_name || '-'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600 flex items-center">
+                    <Building className="w-4 h-4 mr-2" />
+                    IFSC Code
+                  </label>
+                  {editingBank ? (
+                    <input
+                      type="text"
+                      name="ifsc_code"
+                      value={bankFormData.ifsc_code}
+                      onChange={handleBankInputChange}
+                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  ) : (
+                    <p className="mt-1 text-gray-900 font-medium font-mono">{bankDetails?.ifsc_code || '-'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600 flex items-center">
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    Account Type
+                  </label>
+                  {editingBank ? (
+                    <select
+                      name="account_type"
+                      value={bankFormData.account_type}
+                      onChange={handleBankInputChange}
+                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="savings">Savings</option>
+                      <option value="current">Current</option>
+                    </select>
+                  ) : (
+                    <p className="mt-1 text-gray-900 font-medium capitalize">{bankDetails?.account_type || '-'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600 flex items-center">
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    PAN Number
+                  </label>
+                  {editingBank ? (
+                    <input
+                      type="text"
+                      name="pan_number"
+                      value={bankFormData.pan_number}
+                      onChange={handleBankInputChange}
+                      className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Optional"
+                    />
+                  ) : (
+                    <p className="mt-1 text-gray-900 font-medium font-mono">{bankDetails?.pan_number || '-'}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -474,11 +638,11 @@ const EmployeeProfile = () => {
       </div>
 
       {/* Note */}
-      {!editing && (
+      {!editing && !editingBank && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-blue-900">
-            <strong>Note:</strong> You can only edit your contact information. For changes to employment details,
-            salary, or bank information, please contact HR department.
+            <strong>Note:</strong> You can edit your basic information (name, phone, date of birth) and bank details.
+            For changes to employment details or salary information, please contact HR department.
           </p>
         </div>
       )}

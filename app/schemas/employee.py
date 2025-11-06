@@ -31,6 +31,14 @@ class EmployeeUpdate(BaseModel):
     status: Optional[str] = None
 
 
+class EmployeeProfileUpdate(BaseModel):
+    """Schema for employee self-service profile updates - limited fields"""
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    date_of_birth: Optional[date] = None
+
+
 class EmployeeResponse(EmployeeBase):
     id: int
     tenant_id: int

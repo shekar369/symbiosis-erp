@@ -9,7 +9,9 @@ from app.schemas.leave import (
     LeaveRequestUpdate,
     LeaveRequestResponse,
     LeaveBalanceResponse,
-    LeaveTypeResponse
+    LeaveTypeResponse,
+    LeaveTypeCreate,
+    LeaveTypeUpdate
 )
 from app.crud.leave import leave_request, leave_balance, leave_type
 
@@ -169,8 +171,71 @@ async def get_leave_balance(
 
 @router.get("/types", response_model=List[LeaveTypeResponse])
 async def list_leave_types(
+    include_inactive: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """List all active leave types"""
-    return leave_type.get_active(db=db)
+    """List all leave types (active by default, or all if include_inactive=True)"""
+    if include_inactive:
+        return leave_type.get_all(db=db, tenant_id=current_user.tenant_id)
+    return leave_type.get_active(db=db, tenant_id=current_user.tenant_id)
+
+
+@router.get("/types/{leave_type_id}", response_model=LeaveTypeResponse)
+async def get_leave_type(
+    leave_type_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get a specific leave type"""
+    db_leave_type = leave_type.get_by_id(db=db, leave_type_id=leave_type_id, tenant_id=current_user.tenant_id)
+    if not db_leave_type:
+        raise HTTPException(status_code=404, detail="Leave type not found")
+    return db_leave_type
+
+
+@router.post("/types", response_model=LeaveTypeResponse)
+async def create_leave_type(
+    leave_type_data: LeaveTypeCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Create a new leave type (admin/employer only)"""
+    # Check if leave type code already exists
+    existing = leave_type.get_by_code(db=db, code=leave_type_data.code, tenant_id=current_user.tenant_id)
+    if existing:
+        raise HTTPException(status_code=400, detail="Leave type with this code already exists")
+
+    return leave_type.create(db=db, leave_type=leave_type_data, tenant_id=current_user.tenant_id)
+
+
+@router.put("/types/{leave_type_id}", response_model=LeaveTypeResponse)
+async def update_leave_type(
+    leave_type_id: int,
+    leave_type_data: LeaveTypeUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Update a leave type (admin/employer only)"""
+    updated = leave_type.update(
+        db=db,
+        leave_type_id=leave_type_id,
+        leave_type_update=leave_type_data,
+        tenant_id=current_user.tenant_id
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Leave type not found")
+    return updated
+
+
+@router.delete("/types/{leave_type_id}")
+async def delete_leave_type(
+    leave_type_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Delete (soft delete) a leave type (admin/employer only)"""
+    success = leave_type.delete(db=db, leave_type_id=leave_type_id, tenant_id=current_user.tenant_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Leave type not found")
+    return {"message": "Leave type deactivated successfully"}

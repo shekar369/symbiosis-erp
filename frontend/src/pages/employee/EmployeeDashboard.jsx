@@ -54,7 +54,7 @@ const EmployeeDashboard = () => {
 
       // Fetch leave balance
       try {
-        const leaveBalanceResponse = await api.get(`/leave/balance/${employeeId}`);
+        const leaveBalanceResponse = await api.get(`/leaves/balance/${employeeId}`);
         setLeaveBalance(leaveBalanceResponse.data);
       } catch (error) {
         console.log('Leave balance not available');
@@ -62,7 +62,7 @@ const EmployeeDashboard = () => {
 
       // Fetch recent leave requests
       try {
-        const leavesResponse = await api.get(`/leave/requests`, {
+        const leavesResponse = await api.get(`/leaves/requests`, {
           params: { employee_id: employeeId }
         });
         setRecentLeaves(leavesResponse.data.slice(0, 5));

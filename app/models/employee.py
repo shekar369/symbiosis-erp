@@ -38,6 +38,7 @@ class Employee(Base):
     # Relationships
     addresses = relationship("EmployeeAddress", back_populates="employee", cascade="all, delete-orphan")
     documents = relationship("EmployeeDocument", back_populates="employee", cascade="all, delete-orphan")
+    bank_details = relationship("EmployeeBankDetails", back_populates="employee", cascade="all, delete-orphan", uselist=False)
     department = relationship("Department", back_populates="employees")
     designation = relationship("Designation", back_populates="employees")
     grade = relationship("Grade", back_populates="employees")
@@ -71,3 +72,21 @@ class EmployeeDocument(Base):
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
     employee = relationship("Employee", back_populates="documents")
+
+
+class EmployeeBankDetails(Base):
+    __tablename__ = "employee_bank_details"
+
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False, unique=True)
+    account_holder_name = Column(String, nullable=False)
+    account_number = Column(String, nullable=False)
+    bank_name = Column(String, nullable=False)
+    branch_name = Column(String)
+    ifsc_code = Column(String, nullable=False)
+    account_type = Column(String)  # savings, current
+    pan_number = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    employee = relationship("Employee", back_populates="bank_details")

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2 } from "../../utils/icons";
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -8,6 +9,7 @@ import Modal from '../../components/common/Modal';
 import { employeesAPI } from '../../api/employees';
 
 const Employees = () => {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,6 +98,10 @@ const Employees = () => {
     setEditingEmployee(null);
   };
 
+  const handleRowClick = (employee) => {
+    navigate(`/employees/${employee.id}`);
+  };
+
   const columns = [
     { key: 'employee_code', label: 'Code' },
     { key: 'first_name', label: 'First Name' },
@@ -180,7 +186,7 @@ const Employees = () => {
           </div>
         </div>
 
-        <Table columns={columns} data={filteredEmployees} loading={loading} />
+        <Table columns={columns} data={filteredEmployees} loading={loading} onRowClick={handleRowClick} />
       </Card>
 
       <Modal

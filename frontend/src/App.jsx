@@ -7,6 +7,7 @@ import Login from './pages/auth/Login';
 import Dashboard from './pages/dashboard/Dashboard';
 import EmployerDashboard from './pages/dashboard/EmployerDashboard';
 import Employees from './pages/employees/Employees';
+import EmployeeDetail from './pages/employees/EmployeeDetail';
 import Attendance from './pages/attendance/Attendance';
 import Wages from './pages/wages/Wages';
 import Leaves from './pages/leaves/Leaves';
@@ -40,6 +41,7 @@ function App() {
               <Route path="dashboard" element={<EmployerDashboard />} />
             <Route path="dashboard-old" element={<Dashboard />} />
             <Route path="employees" element={<Employees />} />
+            <Route path="employees/:id" element={<EmployeeDetail />} />
             <Route path="locations" element={<Locations />} />
             <Route path="attendance" element={<Attendance />} />
             <Route path="payroll" element={<Payroll />} />

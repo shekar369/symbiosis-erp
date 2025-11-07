@@ -150,15 +150,13 @@ class CRUDLeaveType(CRUDBase[LeaveType, LeaveTypeCreate, LeaveTypeUpdate]):
         ).first()
 
     def create(self, db: Session, leave_type: LeaveTypeCreate, tenant_id: int) -> LeaveType:
+        # Only use columns that exist in the current database schema
         db_leave_type = LeaveType(
             tenant_id=tenant_id,
             name=leave_type.name,
             code=leave_type.code,
             days_per_year=leave_type.days_per_year,
-            is_paid=leave_type.is_paid,
-            carry_forward=leave_type.carry_forward,
-            max_carry_forward_days=leave_type.max_carry_forward_days,
-            description=leave_type.description
+            is_paid=leave_type.is_paid
         )
         db.add(db_leave_type)
         db.commit()

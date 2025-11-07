@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.crud.base import CRUDBase
 from app.models.tenant import Tenant
 from app.schemas.tenant import TenantCreate, TenantUpdate
+from app.utils.leave_setup import initialize_default_leave_types
 
 
 class CRUDTenant(CRUDBase[Tenant, TenantCreate, TenantUpdate]):
@@ -14,7 +15,13 @@ class CRUDTenant(CRUDBase[Tenant, TenantCreate, TenantUpdate]):
         return db.query(Tenant).offset(skip).limit(limit).all()
 
     def create_tenant(self, db: Session, tenant: TenantCreate) -> Tenant:
-        return self.create(db, obj_in=tenant)
+        # Create the tenant
+        new_tenant = self.create(db, obj_in=tenant)
+
+        # Initialize default leave types for the new tenant
+        initialize_default_leave_types(db, new_tenant.id)
+
+        return new_tenant
 
     def update_tenant(self, db: Session, tenant_id: int, tenant_update: TenantUpdate) -> Optional[Tenant]:
         db_tenant = self.get_tenant(db, tenant_id)

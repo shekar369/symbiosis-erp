@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM_EMAIL: str = ""
-    SMTP_FROM_NAME: str = "HR Payroll System"
+    SMTP_FROM_NAME: str = "Symbiosis HR Payroll System"
 
     # Logging
     LOG_LEVEL: str = "INFO"

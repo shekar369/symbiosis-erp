@@ -29,6 +29,7 @@ import {
   MdCheckCircle as CheckCircle2,
   MdApartment as Building,
   MdFilterList as Filter,
+  MdArrowBack as ArrowLeft,
 } from 'react-icons/md';
 
 export {
@@ -60,5 +61,6 @@ export {
   Filter,
   Phone,
   CreditCard,
-  Save
+  Save,
+  ArrowLeft
 };

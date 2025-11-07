@@ -34,9 +34,10 @@ class LeaveBalanceResponse(BaseModel):
     id: int
     employee_id: int
     leave_type_id: int
-    total_leaves: float
-    used_leaves: float
-    balance_leaves: float
+    year: int
+    total_days: float
+    used_days: float
+    balance_days: float
 
     class Config:
         from_attributes = True
@@ -68,13 +69,8 @@ class LeaveTypeResponse(BaseModel):
     name: str
     code: str
     days_per_year: float
-    is_paid: bool
-    carry_forward: bool
-    max_carry_forward_days: float
-    is_active: bool
-    description: Optional[str] = None
+    is_paid: int  # 1 = paid, 0 = unpaid
     created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True

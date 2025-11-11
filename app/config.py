@@ -25,7 +25,7 @@ class Settings(BaseSettings):
         return v or "/api/v1"
 
     # Database
-    DATABASE_URL: str = "sqlite:///test.db"
+    DATABASE_URL: str = "sqlite:///hr_payroll.db"
 
     # Security - Generate secure default but require override in production
     SECRET_KEY: str = secrets.token_urlsafe(32)

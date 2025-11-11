@@ -44,8 +44,8 @@ class Employee(Base):
     last_name = Column(String, nullable=False)
     middle_name = Column(String)
     date_of_birth = Column(Date)
-    gender = Column(Enum(Gender))
-    marital_status = Column(Enum(MaritalStatus))
+    gender = Column(String)  # Database uses VARCHAR, not enum constraint
+    marital_status = Column(String)  # Database uses VARCHAR, not enum constraint
     father_husband_name = Column(String)
     blood_group = Column(String)
 
@@ -60,11 +60,11 @@ class Employee(Base):
     # Employment Details
     date_of_joining = Column(Date, nullable=False)
     date_of_leaving = Column(Date)
-    employment_type = Column(Enum(EmploymentType), default=EmploymentType.PERMANENT)
+    employment_type = Column(String)  # Database uses VARCHAR, not enum constraint
     probation_period_months = Column(Integer)
     confirmation_date = Column(Date)
     notice_period_days = Column(Integer)
-    status = Column(Enum(EmployeeStatus), default=EmployeeStatus.ACTIVE)
+    status = Column(String)  # Database uses VARCHAR, not enum constraint
 
     # Foreign keys
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)

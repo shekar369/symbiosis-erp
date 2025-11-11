@@ -35,13 +35,12 @@ class CRUDLeaveRequest(CRUDBase[LeaveRequest, LeaveRequestCreate, LeaveRequestUp
     def approve_request(
         self, db: Session, request_id: int, approved_by: int, remarks: str = None
     ) -> Optional[LeaveRequest]:
+        from app.models.leave import LeaveStatus
         leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == request_id).first()
-        if leave_request and leave_request.status == "PENDING":
-            leave_request.status = "APPROVED"
+        if leave_request and leave_request.status == LeaveStatus.PENDING:
+            leave_request.status = LeaveStatus.APPROVED
             leave_request.approved_by = approved_by
-            leave_request.approved_date = date.today()
-            if remarks:
-                leave_request.remarks = remarks
+            # Note: approved_date and remarks columns don't exist in database
 
             # Deduct from leave balance
             self._update_leave_balance(db, leave_request.employee_id, leave_request.leave_type_id, leave_request.days)
@@ -54,12 +53,12 @@ class CRUDLeaveRequest(CRUDBase[LeaveRequest, LeaveRequestCreate, LeaveRequestUp
     def reject_request(
         self, db: Session, request_id: int, rejected_by: int, remarks: str
     ) -> Optional[LeaveRequest]:
+        from app.models.leave import LeaveStatus
         leave_request = db.query(LeaveRequest).filter(LeaveRequest.id == request_id).first()
-        if leave_request and leave_request.status == "PENDING":
-            leave_request.status = "REJECTED"
+        if leave_request and leave_request.status == LeaveStatus.PENDING:
+            leave_request.status = LeaveStatus.REJECTED
             leave_request.approved_by = rejected_by
-            leave_request.approved_date = date.today()
-            leave_request.remarks = remarks
+            # Note: approved_date and remarks columns don't exist in database
             db.commit()
             db.refresh(leave_request)
             return leave_request
@@ -112,14 +111,15 @@ class CRUDLeaveBalance(CRUDBase[LeaveBalance, dict, dict]):
         ).first()
 
     def initialize_balance(
-        self, db: Session, employee_id: int, leave_type_id: int, allocated_days: float
+        self, db: Session, employee_id: int, leave_type_id: int, total_days: float, year: int
     ) -> LeaveBalance:
         balance = LeaveBalance(
             employee_id=employee_id,
             leave_type_id=leave_type_id,
-            allocated_days=allocated_days,
+            year=year,
+            total_days=total_days,
             used_days=0,
-            balance_days=allocated_days
+            balance_days=total_days
         )
         db.add(balance)
         db.commit()
@@ -129,9 +129,9 @@ class CRUDLeaveBalance(CRUDBase[LeaveBalance, dict, dict]):
 
 class CRUDLeaveType(CRUDBase[LeaveType, LeaveTypeCreate, LeaveTypeUpdate]):
     def get_active(self, db: Session, tenant_id: int) -> List[LeaveType]:
+        # Since is_active column doesn't exist, just return all leave types for tenant
         return db.query(LeaveType).filter(
-            LeaveType.tenant_id == tenant_id,
-            LeaveType.is_active == True
+            LeaveType.tenant_id == tenant_id
         ).all()
 
     def get_all(self, db: Session, tenant_id: int) -> List[LeaveType]:
@@ -181,8 +181,8 @@ class CRUDLeaveType(CRUDBase[LeaveType, LeaveTypeCreate, LeaveTypeUpdate]):
         if not db_leave_type:
             return False
 
-        # Soft delete - set is_active to False
-        db_leave_type.is_active = False
+        # Hard delete since is_active column doesn't exist
+        db.delete(db_leave_type)
         db.commit()
         return True
 

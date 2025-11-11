@@ -31,9 +31,9 @@ class LeaveBalance(Base):
     employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
     leave_type_id = Column(Integer, ForeignKey("leave_types.id"), nullable=False)
     year = Column(Integer, nullable=False)
-    total_days = Column(Float, default=0)
-    used_days = Column(Float, default=0)
-    balance_days = Column(Float, default=0)
+    total_days = Column(Float, default=0)  # Total allocated leave days for the year
+    used_days = Column(Float, default=0)   # Days already used/taken
+    balance_days = Column(Float, default=0)  # Remaining days (total_days - used_days)
 
 
 class LeaveRequest(Base):

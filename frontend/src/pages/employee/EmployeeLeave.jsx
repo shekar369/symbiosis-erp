@@ -203,7 +203,7 @@ const EmployeeLeave = () => {
 
   const getLeaveBalance = (leaveTypeId) => {
     const balance = leaveBalance.find(lb => lb.leave_type_id === leaveTypeId);
-    return balance?.balance || 0;
+    return balance?.balance_days || 0;
   };
 
   if (loading) {
@@ -230,18 +230,21 @@ const EmployeeLeave = () => {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Leave Balance</h2>
         {leaveBalance.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {leaveBalance.map((balance, index) => (
-              <div key={index} className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-                <p className="text-sm font-medium text-gray-700">{balance.leave_type_name}</p>
-                <div className="flex items-baseline mt-2">
-                  <p className="text-3xl font-bold text-blue-600">{balance.balance || 0}</p>
-                  <p className="text-sm text-gray-600 ml-2">days left</p>
+            {leaveBalance.map((balance, index) => {
+              const leaveType = leaveTypes.find(lt => lt.id === balance.leave_type_id);
+              return (
+                <div key={index} className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                  <p className="text-sm font-medium text-gray-700">{leaveType?.name || 'Unknown'}</p>
+                  <div className="flex items-baseline mt-2">
+                    <p className="text-3xl font-bold text-blue-600">{balance.balance_days || 0}</p>
+                    <p className="text-sm text-gray-600 ml-2">days left</p>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Used: {balance.used_days || 0} / {balance.total_days || 0} days
+                  </p>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Used: {balance.used || 0} days
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="text-gray-500">No leave balance information available</p>

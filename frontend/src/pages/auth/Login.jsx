@@ -11,17 +11,21 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    // If already authenticated, redirect to dashboard
-    if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/dashboard';
+    // If already authenticated, redirect to appropriate dashboard based on role
+    if (isAuthenticated && user) {
+      let defaultPath = '/dashboard';
+      if (user.role === 'employee') {
+        defaultPath = '/employee/dashboard';
+      }
+      const from = location.state?.from?.pathname || defaultPath;
       navigate(from, { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, user, navigate, location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,7 +35,17 @@ const Login = () => {
     try {
       const result = await login(username, password);
       if (result.success) {
-        navigate('/dashboard');
+        // Get user from localStorage to determine role
+        const userData = JSON.parse(localStorage.getItem('user'));
+        const userRole = userData?.role;
+
+        // Navigate based on user role
+        if (userRole === 'employee') {
+          navigate('/employee/dashboard');
+        } else {
+          // employer, hr_manager, admin go to main dashboard
+          navigate('/dashboard');
+        }
       } else {
         setError(result.error || 'Login failed');
       }

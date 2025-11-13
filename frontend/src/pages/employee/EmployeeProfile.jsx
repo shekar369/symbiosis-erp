@@ -538,71 +538,43 @@ const EmployeeProfile = () => {
               <h3 className="text-lg font-semibold text-gray-900">Employment Details</h3>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-600 flex items-center">
-                  <Briefcase className="w-4 h-4 mr-2" />
-                  Employee Code
-                </label>
-                <p className="mt-1 text-gray-900 font-bold">{employeeData?.employee_code}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Date of Joining</label>
+                  <p className="mt-1 text-gray-900 font-medium">{employeeData?.date_of_joining || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Employment Type</label>
+                  <p className="mt-1 text-gray-900 font-medium capitalize">{employeeData?.employment_type || '-'}</p>
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600 flex items-center">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Date of Joining
-                </label>
-                <p className="mt-1 text-gray-900 font-medium">{formatDate(employeeData?.date_of_joining)}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Department</label>
+                  <p className="mt-1 text-gray-900 font-medium">{employeeData?.department || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Designation</label>
+                  <p className="mt-1 text-gray-900 font-medium">{employeeData?.designation || '-'}</p>
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600 flex items-center">
-                  <Briefcase className="w-4 h-4 mr-2" />
-                  Department
-                </label>
-                <p className="mt-1 text-gray-900 font-medium">{employeeData?.department}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600 flex items-center">
-                  <Briefcase className="w-4 h-4 mr-2" />
-                  Designation
-                </label>
-                <p className="mt-1 text-gray-900 font-medium">{employeeData?.designation}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600 flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Status
-                </label>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mt-1 ${
-                  employeeData?.status === 'Active'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {employeeData?.status}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Salary Information */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Salary Information</h3>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
-                <label className="text-sm font-medium text-gray-600">Basic Salary</label>
-                <p className="text-2xl font-bold text-green-600 mt-1">
-                  {formatCurrency(employeeData?.basic_salary)}
-                </p>
-                <p className="text-xs text-gray-600 mt-1">Per month</p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-600">HRA</label>
-                <p className="mt-1 text-gray-900 font-medium">{formatCurrency(employeeData?.hra)}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Other Allowances</label>
-                <p className="mt-1 text-gray-900 font-medium">{formatCurrency(employeeData?.other_allowances)}</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Status</label>
+                  <p className="mt-1">
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      employeeData?.status === 'active' ? 'bg-green-100 text-green-800' :
+                      employeeData?.status === 'inactive' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {employeeData?.status || '-'}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Employee Code</label>
+                  <p className="mt-1 text-gray-900 font-medium font-mono">{employeeData?.employee_code || '-'}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -613,27 +585,131 @@ const EmployeeProfile = () => {
               <h3 className="text-lg font-semibold text-gray-900">Statutory Information</h3>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-600">PAN Number</label>
-                <p className="mt-1 text-gray-900 font-medium font-mono">{employeeData?.pan_number || '-'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">Aadhaar Number</label>
-                <p className="mt-1 text-gray-900 font-medium font-mono">
-                  {employeeData?.aadhaar_number ?
-                    `XXXX XXXX ${employeeData.aadhaar_number.slice(-4)}` : '-'}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">UAN (PF)</label>
-                <p className="mt-1 text-gray-900 font-medium font-mono">{employeeData?.uan_number || '-'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600">ESI Number</label>
-                <p className="mt-1 text-gray-900 font-medium font-mono">{employeeData?.esi_number || '-'}</p>
-              </div>
+              {employeeData?.statutory_details ? (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">PAN Number</label>
+                    <p className="mt-1 text-gray-900 font-medium font-mono">{employeeData.statutory_details.pan_number || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Aadhaar Number</label>
+                    <p className="mt-1 text-gray-900 font-medium font-mono">
+                      {employeeData.statutory_details.aadhaar_number ?
+                        `XXXX XXXX ${employeeData.statutory_details.aadhaar_number.slice(-4)}` : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">UAN (PF)</label>
+                    <p className="mt-1 text-gray-900 font-medium font-mono">{employeeData.statutory_details.uan_number || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">ESI Number</label>
+                    <p className="mt-1 text-gray-900 font-medium font-mono">{employeeData.statutory_details.esic_number || '-'}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">PF Applicable</label>
+                      <p className="mt-1">
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          employeeData.statutory_details.pf_applicable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {employeeData.statutory_details.pf_applicable ? 'Yes' : 'No'}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">ESIC Applicable</label>
+                      <p className="mt-1">
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          employeeData.statutory_details.esic_applicable ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {employeeData.statutory_details.esic_applicable ? 'Yes' : 'No'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No statutory information available</p>
+                  <p className="text-sm mt-1">Please contact HR department</p>
+                </div>
+              )}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Salary Information - Full Width Horizontal Card */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Salary Information</h3>
+        </div>
+        <div className="p-6">
+          {employeeData?.salary_details ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+                <div className="md:col-span-2 bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                  <label className="text-sm font-medium text-gray-600">Basic Salary</label>
+                  <p className="text-2xl font-bold text-green-600 mt-1">
+                    {formatCurrency(employeeData.salary_details.basic_salary)}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">Per month</p>
+                </div>
+
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <label className="text-xs font-medium text-gray-600">HRA</label>
+                  <p className="mt-1 text-lg text-gray-900 font-semibold">{formatCurrency(employeeData.salary_details.hra)}</p>
+                </div>
+
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <label className="text-xs font-medium text-gray-600">Conveyance</label>
+                  <p className="mt-1 text-lg text-gray-900 font-semibold">{formatCurrency(employeeData.salary_details.conveyance_allowance)}</p>
+                </div>
+
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <label className="text-xs font-medium text-gray-600">Medical</label>
+                  <p className="mt-1 text-lg text-gray-900 font-semibold">{formatCurrency(employeeData.salary_details.medical_allowance)}</p>
+                </div>
+
+                <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <label className="text-xs font-medium text-gray-600">Special</label>
+                  <p className="mt-1 text-lg text-gray-900 font-semibold">{formatCurrency(employeeData.salary_details.special_allowance)}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <label className="text-sm font-medium text-gray-600">Gross Salary</label>
+                  <p className="mt-1 text-xl text-blue-600 font-bold">{formatCurrency(employeeData.salary_details.gross_salary)}</p>
+                </div>
+
+                <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                  <label className="text-sm font-medium text-gray-600">Total Deductions</label>
+                  <p className="mt-1 text-xl text-red-600 font-bold">{formatCurrency(employeeData.salary_details.total_deductions)}</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                  <label className="text-sm font-medium text-gray-600">Net Salary</label>
+                  <p className="text-xl font-bold text-purple-600 mt-1">
+                    {formatCurrency(employeeData.salary_details.net_salary)}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">After deductions</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-4 border border-indigo-200">
+                  <label className="text-sm font-medium text-gray-600">Monthly CTC</label>
+                  <p className="text-xl font-bold text-indigo-600 mt-1">{formatCurrency(employeeData.salary_details.ctc)}</p>
+                  <p className="text-xs text-gray-600 mt-1">Cost to Company</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>No salary information available</p>
+              <p className="text-sm mt-1">Please contact HR department</p>
+            </div>
+          )}
         </div>
       </div>
 

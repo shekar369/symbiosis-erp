@@ -348,10 +348,11 @@ const EmployeeDashboard = () => {
 
                 <div className="border-t border-gray-200 pt-4">
                   <div>
-                    <p className="text-sm text-gray-600">Annual CTC</p>
+                    <p className="text-sm text-gray-600">Monthly CTC</p>
                     <p className="text-xl font-bold text-purple-600">
                       {formatCurrency(employeeData.salary_details.ctc)}
                     </p>
+                    <p className="text-xs text-gray-500 mt-1">Cost to Company</p>
                   </div>
                 </div>
 

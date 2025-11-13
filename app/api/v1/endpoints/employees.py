@@ -48,11 +48,19 @@ async def get_current_employee(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get the employee record for the currently logged-in user"""
-    # Find employee by email matching the user's email
-    employee = db.query(Employee).filter(
-        Employee.email == current_user.email,
-        Employee.tenant_id == current_user.tenant_id
-    ).first()
+    from sqlalchemy.orm import joinedload
+
+    # Find employee by email matching the user's email with all related data
+    employee = db.query(Employee)\
+        .options(
+            joinedload(Employee.bank_details),
+            joinedload(Employee.salary_details),
+            joinedload(Employee.statutory_details)
+        )\
+        .filter(
+            Employee.email == current_user.email,
+            Employee.tenant_id == current_user.tenant_id
+        ).first()
 
     if not employee:
         raise HTTPException(

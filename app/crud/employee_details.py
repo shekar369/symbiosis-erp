@@ -62,6 +62,36 @@ def delete_bank_details(db: Session, employee_id: int) -> bool:
 
 # ==================== Salary Details CRUD ====================
 
+def _calculate_salary_components(salary_obj):
+    """Calculate gross salary, total deductions, net salary, and CTC"""
+    # Calculate gross salary (sum of all allowances)
+    gross_salary = (
+        (salary_obj.basic_salary or 0) +
+        (salary_obj.hra or 0) +
+        (salary_obj.conveyance_allowance or 0) +
+        (salary_obj.medical_allowance or 0) +
+        (salary_obj.special_allowance or 0) +
+        (salary_obj.other_allowance or 0)
+    )
+    salary_obj.gross_salary = gross_salary
+
+    # Calculate total deductions (employee portion only)
+    total_deductions = (
+        (salary_obj.pf_employee or 0) +
+        (salary_obj.esic_employee or 0) +
+        (salary_obj.professional_tax or 0) +
+        (salary_obj.tds or 0)
+    )
+    salary_obj.total_deductions = total_deductions
+
+    # Calculate net salary
+    salary_obj.net_salary = gross_salary - total_deductions
+
+    # Calculate CTC (Gross + Employer contributions)
+    ctc = gross_salary + (salary_obj.pf_employer or 0) + (salary_obj.esic_employer or 0)
+    salary_obj.ctc = ctc
+
+
 def get_salary_details(db: Session, employee_id: int) -> Optional[EmployeeSalaryDetails]:
     """Get salary details for an employee"""
     return db.query(EmployeeSalaryDetails).filter(
@@ -79,6 +109,10 @@ def create_salary_details(
         employee_id=employee_id,
         **salary_details.model_dump()
     )
+
+    # Automatically calculate gross, deductions, net, and CTC
+    _calculate_salary_components(db_salary_details)
+
     db.add(db_salary_details)
     db.commit()
     db.refresh(db_salary_details)
@@ -96,6 +130,10 @@ def update_salary_details(
         update_data = salary_details.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_salary_details, field, value)
+
+        # Automatically recalculate gross, deductions, net, and CTC
+        _calculate_salary_components(db_salary_details)
+
         db.commit()
         db.refresh(db_salary_details)
     return db_salary_details

@@ -113,6 +113,11 @@ const EmployeeDetail = () => {
   };
 
   const populateFormData = (data) => {
+    console.log('Populating form data:', data);
+    console.log('Bank details present:', !!data.bank_details);
+    console.log('Salary details present:', !!data.salary_details);
+    console.log('Statutory details present:', !!data.statutory_details);
+
     // Basic Info
     setBasicInfo({
       employee_code: data.employee_code || '',

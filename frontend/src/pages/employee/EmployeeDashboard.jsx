@@ -181,9 +181,13 @@ const EmployeeDashboard = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Current Month</p>
+              <p className="text-sm font-medium text-gray-600">Net Salary</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {currentMonthPayslip ? formatCurrency(currentMonthPayslip.net_pay) : 'N/A'}
+                {currentMonthPayslip
+                  ? formatCurrency(currentMonthPayslip.net_pay)
+                  : employeeData?.salary_details?.net_salary
+                    ? formatCurrency(employeeData.salary_details.net_salary)
+                    : 'N/A'}
               </p>
             </div>
             <div className="bg-green-100 rounded-full p-3">
@@ -191,7 +195,7 @@ const EmployeeDashboard = () => {
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            {currentMonthPayslip ? getStatusBadge(currentMonthPayslip.status) : 'Not processed'}
+            {currentMonthPayslip ? getStatusBadge(currentMonthPayslip.status) : 'Configured salary'}
           </p>
         </div>
 
@@ -299,11 +303,69 @@ const EmployeeDashboard = () => {
                   </button>
                 )}
               </div>
+            ) : employeeData?.salary_details ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Basic Salary</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {formatCurrency(employeeData.salary_details.basic_salary)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">HRA</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {formatCurrency(employeeData.salary_details.hra)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Gross Salary</p>
+                    <p className="text-xl font-bold text-blue-600">
+                      {formatCurrency(employeeData.salary_details.gross_salary)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Total Deductions</p>
+                    <p className="text-xl font-bold text-red-600">
+                      {formatCurrency(employeeData.salary_details.total_deductions)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Net Salary</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {formatCurrency(employeeData.salary_details.net_salary)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Annual CTC</p>
+                    <p className="text-xl font-bold text-purple-600">
+                      {formatCurrency(employeeData.salary_details.ctc)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> This is your configured salary structure. Actual monthly salary may vary based on attendance and other factors.
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="text-center py-8">
                 <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600">No payslip available for current month</p>
-                <p className="text-sm text-gray-500 mt-1">Payslip will be available after payroll processing</p>
+                <p className="text-gray-600">No salary information available</p>
+                <p className="text-sm text-gray-500 mt-1">Please contact HR department</p>
               </div>
             )}
           </div>

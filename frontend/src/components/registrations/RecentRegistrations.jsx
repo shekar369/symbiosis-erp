@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { api } from "@/lib/api"
+import api from "../../api/axios"
 import { toast } from "@/components/ui/use-toast"
 
 export function RecentRegistrations({ registrations }) {

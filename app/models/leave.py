@@ -35,6 +35,9 @@ class LeaveBalance(Base):
     used_days = Column(Float, default=0)   # Days already used/taken
     balance_days = Column(Float, default=0)  # Remaining days (total_days - used_days)
 
+    # Relationships
+    leave_type = relationship("LeaveType")
+
 
 class LeaveRequest(Base):
     __tablename__ = "leave_requests"
@@ -50,3 +53,6 @@ class LeaveRequest(Base):
     approved_by = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    leave_type = relationship("LeaveType")

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchApi } from '../../utils/api';
+import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
 import {
   Card,
@@ -39,16 +39,13 @@ const ConfigurationList = () => {
 
   const { data: configs, isLoading, isError, error } = useQuery({
     queryKey: ['configurations'],
-    queryFn: () => fetchApi('/config'),
+    queryFn: () => api.get('/config').then(r => r.data),
     enabled: Boolean(localStorage.getItem('accessToken')), // Only fetch if authenticated
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data) => 
-      fetchApi(`/config/${data.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data.update),
-      }),
+    mutationFn: (data) =>
+      api.patch(`/config/${data.id}`, data.update).then(r => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries(['configurations']);
       toast.success('Configuration updated successfully');

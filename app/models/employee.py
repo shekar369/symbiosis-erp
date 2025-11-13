@@ -64,7 +64,7 @@ class Employee(Base):
     probation_period_months = Column(Integer)
     confirmation_date = Column(Date)
     notice_period_days = Column(Integer)
-    status = Column(String)  # Database uses VARCHAR, not enum constraint
+    status = Column(String, default=EmployeeStatus.ACTIVE.value, nullable=False)
 
     # Foreign keys
     department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)

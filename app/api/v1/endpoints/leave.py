@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 
 from app.api.dependencies import get_db, get_current_active_user
 from app.models.user import User
+from app.models.leave import LeaveRequest, LeaveBalance, LeaveType
 from app.schemas.leave import (
     LeaveRequestCreate,
     LeaveRequestUpdate,
@@ -18,7 +19,7 @@ from app.crud.leave import leave_request, leave_balance, leave_type
 router = APIRouter()
 
 
-@router.get("/requests", response_model=List[LeaveRequestResponse])
+@router.get("/requests", response_model=List[LeaveRequestResponse], response_model_exclude_none=False)
 async def list_leave_requests(
     skip: int = 0,
     limit: int = 20,
@@ -27,9 +28,33 @@ async def list_leave_requests(
     current_user: User = Depends(get_current_active_user)
 ):
     """List all leave requests or filter by employee"""
+    # Fetch leave requests with leave_type relationship
+    query = db.query(LeaveRequest).options(joinedload(LeaveRequest.leave_type))
+
     if employee_id:
-        return leave_request.get_by_employee(db=db, employee_id=employee_id, skip=skip, limit=limit)
-    return leave_request.get_multi(db=db, skip=skip, limit=limit)
+        query = query.filter(LeaveRequest.employee_id == employee_id)
+
+    requests = query.offset(skip).limit(limit).all()
+
+    # Manually construct response with leave_type_name
+    result = []
+    for req in requests:
+        result.append({
+            "id": req.id,
+            "employee_id": req.employee_id,
+            "leave_type_id": req.leave_type_id,
+            "leave_type_name": req.leave_type.name if req.leave_type else None,
+            "start_date": req.start_date,
+            "end_date": req.end_date,
+            "days": req.days,
+            "reason": req.reason,
+            "status": req.status,
+            "approved_by": req.approved_by,
+            "created_at": req.created_at,
+            "updated_at": req.updated_at
+        })
+
+    return result
 
 
 @router.get("/requests/pending", response_model=List[LeaveRequestResponse])
@@ -159,14 +184,35 @@ async def cancel_leave_request(
     return {"message": "Leave request cancelled successfully"}
 
 
-@router.get("/balance/{employee_id}", response_model=List[LeaveBalanceResponse])
+@router.get("/balance/{employee_id}", response_model=List[LeaveBalanceResponse], response_model_exclude_none=False)
 async def get_leave_balance(
     employee_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """Get leave balance for an employee"""
-    return leave_balance.get_by_employee(db=db, employee_id=employee_id)
+    # Fetch leave balances with leave_type relationship
+    balances = db.query(LeaveBalance).options(
+        joinedload(LeaveBalance.leave_type)
+    ).filter(LeaveBalance.employee_id == employee_id).all()
+
+    # Manually construct response with leave_type_name and aliased fields
+    result = []
+    for bal in balances:
+        result.append({
+            "id": bal.id,
+            "employee_id": bal.employee_id,
+            "leave_type_id": bal.leave_type_id,
+            "leave_type_name": bal.leave_type.name if bal.leave_type else None,
+            "year": bal.year,
+            "total_days": bal.total_days,
+            "used_days": bal.used_days,
+            "balance_days": bal.balance_days,
+            "balance": bal.balance_days,  # Alias for frontend
+            "used": bal.used_days  # Alias for frontend
+        })
+
+    return result
 
 
 @router.get("/types", response_model=List[LeaveTypeResponse])

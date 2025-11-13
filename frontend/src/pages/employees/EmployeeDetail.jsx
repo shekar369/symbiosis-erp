@@ -151,21 +151,92 @@ const EmployeeDetail = () => {
       status: data.status || 'active',
     });
 
-    // Bank Info - TODO: fetch from bank_details relationship
-    // Salary Info - TODO: fetch from salary_details relationship
-    // Statutory Info - TODO: fetch from statutory_details relationship
+    // Bank Info - loaded from bank_details relationship
+    if (data.bank_details) {
+      setBankInfo({
+        account_holder_name: data.bank_details.account_holder_name || '',
+        account_number: data.bank_details.account_number || '',
+        bank_name: data.bank_details.bank_name || '',
+        branch_name: data.bank_details.branch_name || '',
+        ifsc_code: data.bank_details.ifsc_code || '',
+        account_type: data.bank_details.account_type || 'savings',
+        pan_number: data.bank_details.pan_number || '',
+      });
+    }
+
+    // Salary Info - loaded from salary_details relationship
+    if (data.salary_details) {
+      setSalaryInfo({
+        basic_salary: data.salary_details.basic_salary?.toString() || '0',
+        hra: data.salary_details.hra?.toString() || '0',
+        conveyance_allowance: data.salary_details.conveyance_allowance?.toString() || '0',
+        medical_allowance: data.salary_details.medical_allowance?.toString() || '0',
+        special_allowance: data.salary_details.special_allowance?.toString() || '0',
+        other_allowance: data.salary_details.other_allowance?.toString() || '0',
+        gross_salary: data.salary_details.gross_salary?.toString() || '0',
+        pf_employee: data.salary_details.pf_employee?.toString() || '0',
+        pf_employer: data.salary_details.pf_employer?.toString() || '0',
+        esic_employee: data.salary_details.esic_employee?.toString() || '0',
+        esic_employer: data.salary_details.esic_employer?.toString() || '0',
+        professional_tax: data.salary_details.professional_tax?.toString() || '0',
+        tds: data.salary_details.tds?.toString() || '0',
+        total_deductions: data.salary_details.total_deductions?.toString() || '0',
+        net_salary: data.salary_details.net_salary?.toString() || '0',
+        ctc: data.salary_details.ctc?.toString() || '0',
+      });
+    }
+
+    // Statutory Info - loaded from statutory_details relationship
+    if (data.statutory_details) {
+      setStatutoryInfo({
+        pan_number: data.statutory_details.pan_number || '',
+        aadhaar_number: data.statutory_details.aadhaar_number || '',
+        uan_number: data.statutory_details.uan_number || '',
+        esic_number: data.statutory_details.esic_number || '',
+        pf_applicable: data.statutory_details.pf_applicable !== undefined ? data.statutory_details.pf_applicable : true,
+        esic_applicable: data.statutory_details.esic_applicable !== undefined ? data.statutory_details.esic_applicable : true,
+        lwf_applicable: data.statutory_details.lwf_applicable !== undefined ? data.statutory_details.lwf_applicable : false,
+        pt_applicable: data.statutory_details.pt_applicable !== undefined ? data.statutory_details.pt_applicable : true,
+        previous_employer_pf_number: data.statutory_details.previous_employer_pf_number || '',
+        date_of_exit_from_previous_pf: data.statutory_details.date_of_exit_from_previous_pf || '',
+      });
+    }
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
+
+      // Update basic employee info
       const updateData = {
         ...basicInfo,
         ...contactInfo,
         ...employmentInfo,
       };
       await employeesAPI.update(id, updateData);
-      alert('Employee updated successfully');
+
+      // Save/Update bank details
+      if (employee.bank_details) {
+        await employeesAPI.updateBankDetails(id, bankInfo);
+      } else if (bankInfo.account_holder_name || bankInfo.account_number) {
+        await employeesAPI.createBankDetails(id, bankInfo);
+      }
+
+      // Save/Update salary details
+      if (employee.salary_details) {
+        await employeesAPI.updateSalaryDetails(id, salaryInfo);
+      } else if (parseFloat(salaryInfo.basic_salary) > 0) {
+        await employeesAPI.createSalaryDetails(id, salaryInfo);
+      }
+
+      // Save/Update statutory details
+      if (employee.statutory_details) {
+        await employeesAPI.updateStatutoryDetails(id, statutoryInfo);
+      } else if (statutoryInfo.pan_number || statutoryInfo.aadhaar_number) {
+        await employeesAPI.createStatutoryDetails(id, statutoryInfo);
+      }
+
+      alert('Employee details updated successfully');
       fetchEmployee();
     } catch (error) {
       console.error('Failed to update employee:', error);

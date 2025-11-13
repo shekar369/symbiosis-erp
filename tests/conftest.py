@@ -1,51 +1,53 @@
+import itertools
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import date
 
-from app.main import app
-from app.db.base import Base
 from app.api.dependencies import get_db
-from app.models.tenant import Tenant
-from app.schemas.tenant import TenantCreate
+from app.core.security import get_password_hash
+from app.db.base import Base
+from app.main import app
 from app.models.employee import Employee
+from app.models.tenant import Tenant
+from app.models.user import User
+from app.schemas.tenant import TenantCreate
 
-# Test database URL
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-@pytest.fixture
+@pytest.fixture()
 def db():
     Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
+    session = TestingSessionLocal()
     try:
-        yield db
+        yield session
     finally:
-        db.close()
+        session.close()
         Base.metadata.drop_all(bind=engine)
 
 
-@pytest.fixture
-def client():
+@pytest.fixture()
+def client(db):
     def override_get_db():
-        db = TestingSessionLocal()
         try:
             yield db
         finally:
-            db.close()
+            db.rollback()
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client
-    app.dependency_overrides = {}
+    app.dependency_overrides.clear()
 
-@pytest.fixture
+
+@pytest.fixture()
 def test_tenant(db):
-    # Create a test tenant
     tenant_data = TenantCreate(
         name="Test Company",
         slug="test-company",
@@ -65,24 +67,65 @@ def test_tenant(db):
     db.refresh(tenant)
     return tenant
 
-@pytest.fixture
-def admin_token_headers(client: TestClient, test_users):
-    response = client.post(
-        "/api/v1/auth/login",
-        data={
-            "username": "test_admin",
-            "password": "test_admin_pass"
-        }
-    )
-    tokens = response.json()
-    return {"Authorization": f"Bearer {tokens['access_token']}"}
-    db.refresh(tenant)
-    yield tenant
-    # Cleanup is handled by the db fixture
 
-@pytest.fixture
+_DEFAULT_TENANT = object()
+
+
+@pytest.fixture()
+def user_factory(db, test_tenant):
+    counter = itertools.count(1)
+
+    def _factory(
+        *,
+        username: str | None = None,
+        email: str | None = None,
+        password: str = "TestPass123!",
+        role: str = "employee",
+        is_active: bool = True,
+        is_superuser: bool = False,
+        tenant_id: int | None | object = _DEFAULT_TENANT
+    ) -> tuple[User, str]:
+        idx = next(counter)
+        username = username or f"user{idx}"
+        email = email or f"{username}@example.com"
+        hashed_password = get_password_hash(password)
+
+        tenant_value = test_tenant.id if tenant_id is _DEFAULT_TENANT else tenant_id
+
+        user = User(
+            username=username,
+            email=email,
+            hashed_password=hashed_password,
+            role=role,
+            is_active=is_active,
+            is_superuser=is_superuser,
+            tenant_id=tenant_value
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user, password
+
+    return _factory
+
+
+@pytest.fixture()
+def auth_headers(client, user_factory):
+    def _create_and_login(**user_kwargs):
+        user, password = user_factory(**user_kwargs)
+        response = client.post(
+            "/api/v1/auth/login",
+            data={"username": user.username, "password": password}
+        )
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+        return user, {"Authorization": f"Bearer {token}"}
+
+    return _create_and_login
+
+
+@pytest.fixture()
 def test_employee(db, test_tenant):
-    # Create a test employee
     employee = Employee(
         tenant_id=test_tenant.id,
         employee_code="EMP001",
@@ -96,17 +139,4 @@ def test_employee(db, test_tenant):
     db.add(employee)
     db.commit()
     db.refresh(employee)
-    yield employee
-    # Cleanup is handled by the db fixture
-
-@pytest.fixture
-def client(db):
-    def override_get_db():
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = override_get_db
-    yield TestClient(app)
-    app.dependency_overrides.clear()
+    return employee

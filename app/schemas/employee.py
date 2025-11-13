@@ -4,6 +4,42 @@ from typing import Optional
 from decimal import Decimal
 
 
+# ==================== Bank Details Schemas ====================
+
+class EmployeeBankDetailsBase(BaseModel):
+    account_holder_name: str
+    account_number: str
+    bank_name: str
+    branch_name: Optional[str] = None
+    ifsc_code: str
+    account_type: Optional[str] = "savings"
+    pan_number: Optional[str] = None
+
+
+class EmployeeBankDetailsCreate(EmployeeBankDetailsBase):
+    pass
+
+
+class EmployeeBankDetailsUpdate(BaseModel):
+    account_holder_name: Optional[str] = None
+    account_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    branch_name: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    account_type: Optional[str] = None
+    pan_number: Optional[str] = None
+
+
+class EmployeeBankDetailsResponse(EmployeeBankDetailsBase):
+    id: int
+    employee_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ==================== Salary Details Schemas ====================
 
 class EmployeeSalaryDetailsBase(BaseModel):
@@ -192,6 +228,7 @@ class EmployeeResponse(EmployeeBase):
     updated_at: datetime
 
     # Related data (optional, loaded when needed)
+    bank_details: Optional[EmployeeBankDetailsResponse] = None
     salary_details: Optional[EmployeeSalaryDetailsResponse] = None
     statutory_details: Optional[EmployeeStatutoryDetailsResponse] = None
 

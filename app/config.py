@@ -6,7 +6,7 @@ import secrets
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "HR Payroll System - Symbiosiss"
+    PROJECT_NAME: str = "HR Payroll System - Symbiosis"
     API_V1_STR: str = "/api/v1"
 
     # Environment
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
         return v or "/api/v1"
 
     # Database
-    DATABASE_URL: str = "sqlite:///hr_payroll.db"
+    DATABASE_URL: str = "postgresql://postgres:hrpayroll2024@localhost:5432/hr_payroll"
 
     # Security - Generate secure default but require override in production
     SECRET_KEY: str = secrets.token_urlsafe(32)

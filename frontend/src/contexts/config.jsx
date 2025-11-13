@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchApi } from '../utils/api';
+import api from '../api/axios';
 
 const ConfigContext = createContext(null);
 
 export const ConfigProvider = ({ children }) => {
   const { data: configs, isLoading } = useQuery({
     queryKey: ['configurations'],
-    queryFn: () => fetchApi('/config'),
+    queryFn: () => api.get('/config').then(r => r.data),
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     retry: false,
     refetchOnWindowFocus: false,

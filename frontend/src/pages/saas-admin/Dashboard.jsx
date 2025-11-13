@@ -5,7 +5,7 @@ import { SubscriptionList, InvoiceList } from '@/components/billing/BillingCompo
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RecentRegistrations } from '@/components/registrations/RecentRegistrations'
 import { Button } from '@/components/ui/button'
-import { api } from '@/lib/api'
+import api from '../../api/axios'
 
 export default function SaasAdminDashboard() {
   const [dashboardData, setDashboardData] = useState(null)

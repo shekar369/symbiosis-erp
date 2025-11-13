@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Calendar, DollarSign, TrendingUp, Download } from '../../utils/icons';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -11,6 +11,131 @@ const Dashboard = () => {
   const currentDate = new Date();
   const [templateMonth, setTemplateMonth] = useState(currentDate.getMonth() + 1);
   const [templateYear, setTemplateYear] = useState(currentDate.getFullYear());
+  const [stats, setStats] = useState([
+    {
+      title: 'Total Employees',
+      value: '0',
+      icon: Users,
+      color: 'bg-blue-500',
+      change: 'Loading...',
+    },
+    {
+      title: 'Present Today',
+      value: '0',
+      icon: Calendar,
+      color: 'bg-green-500',
+      change: 'Loading...',
+    },
+    {
+      title: 'Payroll This Month',
+      value: 'Rs. 0',
+      icon: DollarSign,
+      color: 'bg-purple-500',
+      change: 'Loading...',
+    },
+    {
+      title: 'Leave Requests',
+      value: '0',
+      icon: TrendingUp,
+      color: 'bg-orange-500',
+      change: 'Loading...',
+    },
+  ]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardStats();
+  }, []);
+
+  const loadDashboardStats = async () => {
+    try {
+      setLoading(true);
+      // Fetch employees to get total count
+      const employeesData = await employeesAPI.getAll(0, 1000);
+
+      // Handle both array response and object with items
+      const employeesList = Array.isArray(employeesData) ? employeesData : (employeesData.items || []);
+      const totalEmployees = employeesList.length;
+
+      // Calculate active employees
+      const activeEmployees = employeesList.filter(emp =>
+        emp.status === 'ACTIVE' || emp.status === 'active'
+      ).length;
+
+      // Update stats with real data
+      setStats([
+        {
+          title: 'Total Employees',
+          value: totalEmployees.toString(),
+          icon: Users,
+          color: 'bg-blue-500',
+          change: `${activeEmployees} active`,
+        },
+        {
+          title: 'Active Employees',
+          value: activeEmployees.toString(),
+          icon: Calendar,
+          color: 'bg-green-500',
+          change: `${totalEmployees > 0 ? Math.round((activeEmployees / totalEmployees) * 100) : 0}% of total`,
+        },
+        {
+          title: 'Departments',
+          value: new Set(employeesList.map(e => e.department_id).filter(Boolean)).size.toString(),
+          icon: DollarSign,
+          color: 'bg-purple-500',
+          change: 'Across organization',
+        },
+        {
+          title: 'Recent Hires',
+          value: employeesList.filter(emp => {
+            if (!emp.date_of_joining) return false;
+            const joinDate = new Date(emp.date_of_joining);
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            return joinDate >= thirtyDaysAgo;
+          }).length.toString(),
+          icon: TrendingUp,
+          color: 'bg-orange-500',
+          change: 'Last 30 days',
+        },
+      ]);
+    } catch (error) {
+      console.error('Failed to load dashboard stats:', error);
+      // Show error state
+      setStats([
+        {
+          title: 'Total Employees',
+          value: 'Error',
+          icon: Users,
+          color: 'bg-blue-500',
+          change: 'Failed to load',
+        },
+        {
+          title: 'Active Employees',
+          value: 'Error',
+          icon: Calendar,
+          color: 'bg-green-500',
+          change: 'Failed to load',
+        },
+        {
+          title: 'Departments',
+          value: 'Error',
+          icon: DollarSign,
+          color: 'bg-purple-500',
+          change: 'Failed to load',
+        },
+        {
+          title: 'Recent Hires',
+          value: 'Error',
+          icon: TrendingUp,
+          color: 'bg-orange-500',
+          change: 'Failed to load',
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAttendanceTemplateDownload = async (e) => {
     e.preventDefault();
@@ -33,37 +158,6 @@ const Dashboard = () => {
       alert('Failed to download employee template. Please try again.');
     }
   };
-
-  const stats = [
-    {
-      title: 'Total Employees',
-      value: '150',
-      icon: Users,
-      color: 'bg-blue-500',
-      change: '+5 this month',
-    },
-    {
-      title: 'Present Today',
-      value: '142',
-      icon: Calendar,
-      color: 'bg-green-500',
-      change: '94.7% attendance',
-    },
-    {
-      title: 'Payroll This Month',
-      value: '$125,000',
-      icon: DollarSign,
-      color: 'bg-purple-500',
-      change: '+8% from last month',
-    },
-    {
-      title: 'Leave Requests',
-      value: '12',
-      icon: TrendingUp,
-      color: 'bg-orange-500',
-      change: '5 pending approval',
-    },
-  ];
 
   return (
     <div>

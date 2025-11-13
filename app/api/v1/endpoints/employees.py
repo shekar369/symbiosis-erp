@@ -34,6 +34,7 @@ async def create_employee(
         department_id=employee.department_id,
         designation_id=employee.designation_id,
         grade_id=employee.grade_id,
+        status="active"
     )
     db.add(db_employee)
     db.commit()

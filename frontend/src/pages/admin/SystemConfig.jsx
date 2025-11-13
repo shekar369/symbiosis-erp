@@ -12,7 +12,7 @@ import {
 } from '@chakra-ui/react';
 import { MdSettings, MdRefresh } from 'react-icons/md';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchApi } from '../../utils/api';
+import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
 import ConfigurationList from '../../components/admin/ConfigurationList';
 
@@ -20,7 +20,7 @@ const SystemConfigPage = () => {
   const queryClient = useQueryClient();
 
   const initializeMutation = useMutation({
-    mutationFn: () => fetchApi('/config/initialize', { method: 'POST' }),
+    mutationFn: () => api.post('/config/initialize').then(r => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries(['configurations']);
       toast.success('Default configurations initialized successfully');

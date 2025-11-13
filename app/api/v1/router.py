@@ -5,6 +5,7 @@ from app.api.v1.endpoints import (
     health,
     tenants,
     employees,
+    employee_details,
     attendance,
     wage,
     leave,
@@ -22,6 +23,7 @@ from app.api.v1.endpoints import (
     registration,
     billing,
     bank,
+    organization,
 )
 
 api_router = APIRouter()
@@ -32,6 +34,7 @@ api_router.include_router(registration.router, prefix="/registration", tags=["re
 api_router.include_router(billing.router, prefix="/billing", tags=["billing"])
 api_router.include_router(tenants.router, prefix="/tenants", tags=["tenants"])
 api_router.include_router(employees.router, prefix="/employees", tags=["employees"])
+api_router.include_router(employee_details.router, prefix="/employees", tags=["employee-details"])
 api_router.include_router(bank.router, prefix="/bank", tags=["bank"])
 api_router.include_router(locations.router, prefix="/locations", tags=["locations"])
 api_router.include_router(templates.router, prefix="/templates", tags=["templates"])
@@ -47,3 +50,4 @@ api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(auditor.router, prefix="/auditor", tags=["auditor"])
 api_router.include_router(statutory.router, prefix="/statutory", tags=["statutory"])
 api_router.include_router(config.router, prefix="/config", tags=["config"])
+api_router.include_router(organization.router, prefix="/organization", tags=["organization"])

@@ -20,6 +20,7 @@ class LeaveRequestResponse(BaseModel):
     id: int
     employee_id: int
     leave_type_id: int
+    leave_type_name: Optional[str] = None  # Will be populated from join
     start_date: date
     end_date: date
     days: float
@@ -34,10 +35,14 @@ class LeaveBalanceResponse(BaseModel):
     id: int
     employee_id: int
     leave_type_id: int
+    leave_type_name: Optional[str] = None  # Will be populated from join
     year: int
     total_days: float
     used_days: float
     balance_days: float
+    # Frontend aliases
+    balance: Optional[float] = None  # Alias for balance_days
+    used: Optional[float] = None  # Alias for used_days
 
     class Config:
         from_attributes = True

@@ -26,15 +26,16 @@ app = FastAPI(
     generate_unique_id_function=custom_generate_unique_id
 )
 
-# Set up CORS - Allow all origins in development for maximum compatibility
+# Set up CORS - Allow all origins in development; restrict in other envs
+allowed_origins = ["*"] if settings.ENVIRONMENT == "development" else settings.BACKEND_CORS_ORIGINS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins in development
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  # All HTTP methods
-    allow_headers=["*"],  # All headers including Authorization, Content-Type
-    expose_headers=["*"],  # Expose all response headers
-    max_age=3600,  # Cache preflight requests for 1 hour
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 # Custom middleware

@@ -47,4 +47,73 @@ export const employeesAPI = {
     link.remove();
     window.URL.revokeObjectURL(url);
   },
+
+  // Bank Details
+  getBankDetails: async (employeeId) => {
+    try {
+      const response = await axios.get(`/employees/${employeeId}/bank-details`);
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  createBankDetails: async (employeeId, data) => {
+    const response = await axios.post(`/employees/${employeeId}/bank-details`, data);
+    return response.data;
+  },
+
+  updateBankDetails: async (employeeId, data) => {
+    const response = await axios.put(`/employees/${employeeId}/bank-details`, data);
+    return response.data;
+  },
+
+  // Salary Details
+  getSalaryDetails: async (employeeId) => {
+    try {
+      const response = await axios.get(`/employees/${employeeId}/salary-details`);
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  createSalaryDetails: async (employeeId, data) => {
+    const response = await axios.post(`/employees/${employeeId}/salary-details`, data);
+    return response.data;
+  },
+
+  updateSalaryDetails: async (employeeId, data) => {
+    const response = await axios.put(`/employees/${employeeId}/salary-details`, data);
+    return response.data;
+  },
+
+  // Statutory Details
+  getStatutoryDetails: async (employeeId) => {
+    try {
+      const response = await axios.get(`/employees/${employeeId}/statutory-details`);
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  createStatutoryDetails: async (employeeId, data) => {
+    const response = await axios.post(`/employees/${employeeId}/statutory-details`, data);
+    return response.data;
+  },
+
+  updateStatutoryDetails: async (employeeId, data) => {
+    const response = await axios.put(`/employees/${employeeId}/statutory-details`, data);
+    return response.data;
+  },
 };

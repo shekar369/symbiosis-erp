@@ -59,10 +59,10 @@ const Sidebar = () => {
 
       <nav className="flex-1 px-4 py-6 overflow-y-auto">
         {/* Employer Section */}
-        {user?.role === 'employer_admin' && (
+        {(user?.role === 'employer' || user?.role === 'employer_admin' || user?.role === 'hr_manager' || user?.role === 'admin') && (
           <div className="mb-6">
             <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-4">
-              Employer
+              {user?.role === 'hr_manager' ? 'HR Management' : 'Employer'}
             </h3>
             <ul className="space-y-2">
               {employerMenuItems.map((item) => {

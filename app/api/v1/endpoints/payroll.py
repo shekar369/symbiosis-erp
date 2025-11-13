@@ -40,10 +40,12 @@ class WageStatementResponse(BaseModel):
     employee_id: int
     month: int
     year: int
-    days_worked: int
-    effective_days: float
+    total_days: int
+    present_days: int
+    absent_days: int
+    leave_days: int
     basic_salary: float
-    gross_salary: float
+    total_earnings: float
     total_deductions: float
     net_salary: float
     status: str
@@ -173,47 +175,48 @@ def get_employee_wage_statement(
             detail="Access denied"
         )
 
+    # Get earnings and deductions from JSON breakdown
+    earnings_breakdown = statement.earnings_breakdown or {}
+    deductions_breakdown = statement.deductions_breakdown or {}
+
+    # Get designation and department names
+    designation_name = employee.designation.name if employee.designation else None
+    department_name = employee.department.name if employee.department else None
+
     return {
         "id": statement.id,
         "employee_id": statement.employee_id,
         "employee": {
             "code": employee.employee_code,
             "name": f"{employee.first_name} {employee.last_name}",
-            "email": employee.email
+            "email": employee.email,
+            "designation": designation_name,
+            "department": department_name
         },
         "period": {
             "month": statement.month,
             "year": statement.year
         },
         "attendance": {
-            "days_worked": statement.days_worked,
-            "days_absent": statement.days_absent,
-            "days_half_day": statement.days_half_day,
-            "effective_days": statement.effective_days,
-            "total_days": statement.total_days
+            "total_days": statement.total_days,
+            "present_days": statement.present_days,
+            "absent_days": statement.absent_days,
+            "leave_days": statement.leave_days
         },
         "earnings": {
             "basic_salary": statement.basic_salary,
-            "hra": statement.hra,
-            "conveyance_allowance": statement.conveyance_allowance,
-            "medical_allowance": statement.medical_allowance,
-            "special_allowance": statement.special_allowance,
-            "other_allowances": statement.other_allowances,
-            "overtime_amount": statement.overtime_amount,
-            "gross_salary": statement.gross_salary
+            "total_earnings": statement.total_earnings,
+            "breakdown": earnings_breakdown
         },
         "deductions": {
-            "pf_employee": statement.pf_employee,
-            "esi_employee": statement.esi_employee,
-            "professional_tax": statement.professional_tax,
-            "tds": statement.tds,
-            "loan_deduction": statement.loan_deduction,
-            "advance_deduction": statement.advance_deduction,
-            "other_deductions": statement.other_deductions,
-            "total_deductions": statement.total_deductions
+            "total_deductions": statement.total_deductions,
+            "breakdown": deductions_breakdown
         },
         "net_salary": statement.net_salary,
-        "status": statement.status
+        "status": statement.status,
+        "calculated_at": statement.calculated_at.isoformat() if statement.calculated_at else None,
+        "approved_at": statement.approved_at.isoformat() if statement.approved_at else None,
+        "paid_at": statement.paid_at.isoformat() if statement.paid_at else None
     }
 
 
@@ -345,7 +348,7 @@ def get_payroll_summary(
     ).all()
 
     total_employees = len(statements)
-    total_gross = sum(s.gross_salary for s in statements)
+    total_gross = sum(s.total_earnings for s in statements)
     total_deductions = sum(s.total_deductions for s in statements)
     total_net = sum(s.net_salary for s in statements)
 
@@ -407,42 +410,48 @@ def download_payslip(
         "employee_id": statement.employee_id,
         "month": statement.month,
         "year": statement.year,
-        "days_worked": statement.days_worked,
-        "days_absent": statement.days_absent,
-        "days_half_day": statement.days_half_day,
-        "effective_days": statement.effective_days,
         "total_days": statement.total_days,
+        "present_days": statement.present_days,
+        "absent_days": statement.absent_days,
+        "leave_days": statement.leave_days,
         "basic_salary": statement.basic_salary,
-        "hra": statement.hra,
-        "conveyance_allowance": statement.conveyance_allowance,
-        "medical_allowance": statement.medical_allowance,
-        "special_allowance": statement.special_allowance,
-        "other_allowances": statement.other_allowances,
-        "overtime_amount": statement.overtime_amount,
-        "gross_salary": statement.gross_salary,
-        "pf_employee": statement.pf_employee,
-        "pf_employer": statement.pf_employer,
-        "esi_employee": statement.esi_employee,
-        "esi_employer": statement.esi_employer,
-        "professional_tax": statement.professional_tax,
-        "tds": statement.tds,
-        "loan_deduction": statement.loan_deduction,
-        "advance_deduction": statement.advance_deduction,
-        "other_deductions": statement.other_deductions,
+        "total_earnings": statement.total_earnings,
         "total_deductions": statement.total_deductions,
-        "net_salary": statement.net_salary
+        "net_salary": statement.net_salary,
+        "earnings_breakdown": statement.earnings_breakdown or {},
+        "deductions_breakdown": statement.deductions_breakdown or {}
     }
+
+    # Get related data
+    designation_name = employee.designation.name if employee.designation else "N/A"
+    department_name = employee.department.name if employee.department else "N/A"
+
+    # Get bank and statutory details
+    bank_account = "N/A"
+    pan_number = "N/A"
+    pf_number = "N/A"
+
+    if employee.bank_details:
+        bank_account = employee.bank_details.account_number
+        if employee.bank_details.pan_number:
+            pan_number = employee.bank_details.pan_number
+
+    if employee.statutory_details:
+        if employee.statutory_details.pan_number:
+            pan_number = employee.statutory_details.pan_number
+        if employee.statutory_details.uan_number:
+            pf_number = employee.statutory_details.uan_number
 
     employee_data = {
         "employee_code": employee.employee_code,
         "first_name": employee.first_name,
         "last_name": employee.last_name,
-        "designation": employee.designation,
-        "department": employee.department,
+        "designation": designation_name,
+        "department": department_name,
         "date_of_joining": str(employee.date_of_joining) if employee.date_of_joining else "N/A",
-        "bank_account": employee.bank_account if hasattr(employee, 'bank_account') else "N/A",
-        "pan": employee.pan if hasattr(employee, 'pan') else "N/A",
-        "pf_number": employee.pf_number if hasattr(employee, 'pf_number') else "N/A"
+        "bank_account": bank_account,
+        "pan": pan_number,
+        "pf_number": pf_number
     }
 
     tenant_data = {
@@ -502,16 +511,10 @@ def download_salary_register(
         wage_statements.append({
             "employee_code": employee.employee_code,
             "employee_name": f"{employee.first_name} {employee.last_name}",
-            "effective_days": statement.effective_days,
-            "gross_salary": statement.gross_salary,
-            "pf_employee": statement.pf_employee,
-            "esi_employee": statement.esi_employee,
-            "professional_tax": statement.professional_tax,
-            "tds": statement.tds,
-            "loan_deduction": statement.loan_deduction,
-            "advance_deduction": statement.advance_deduction,
-            "other_deductions": statement.other_deductions,
-            "net_salary": statement.net_salary
+            "present_days": statement.present_days,
+            "total_earnings": statement.total_earnings,
+            "net_salary": statement.net_salary,
+            "deductions_breakdown": statement.deductions_breakdown or {}
         })
 
     tenant_data = {
@@ -739,42 +742,48 @@ def send_payslip_email(
         "employee_id": statement.employee_id,
         "month": statement.month,
         "year": statement.year,
-        "days_worked": statement.days_worked,
-        "days_absent": statement.days_absent,
-        "days_half_day": statement.days_half_day,
-        "effective_days": statement.effective_days,
         "total_days": statement.total_days,
+        "present_days": statement.present_days,
+        "absent_days": statement.absent_days,
+        "leave_days": statement.leave_days,
         "basic_salary": statement.basic_salary,
-        "hra": statement.hra,
-        "conveyance_allowance": statement.conveyance_allowance,
-        "medical_allowance": statement.medical_allowance,
-        "special_allowance": statement.special_allowance,
-        "other_allowances": statement.other_allowances,
-        "overtime_amount": statement.overtime_amount,
-        "gross_salary": statement.gross_salary,
-        "pf_employee": statement.pf_employee,
-        "pf_employer": statement.pf_employer,
-        "esi_employee": statement.esi_employee,
-        "esi_employer": statement.esi_employer,
-        "professional_tax": statement.professional_tax,
-        "tds": statement.tds,
-        "loan_deduction": statement.loan_deduction,
-        "advance_deduction": statement.advance_deduction,
-        "other_deductions": statement.other_deductions,
+        "total_earnings": statement.total_earnings,
         "total_deductions": statement.total_deductions,
-        "net_salary": statement.net_salary
+        "net_salary": statement.net_salary,
+        "earnings_breakdown": statement.earnings_breakdown or {},
+        "deductions_breakdown": statement.deductions_breakdown or {}
     }
+
+    # Get related data
+    designation_name = employee.designation.name if employee.designation else "N/A"
+    department_name = employee.department.name if employee.department else "N/A"
+
+    # Get bank and statutory details
+    bank_account = "N/A"
+    pan_number = "N/A"
+    pf_number = "N/A"
+
+    if employee.bank_details:
+        bank_account = employee.bank_details.account_number
+        if employee.bank_details.pan_number:
+            pan_number = employee.bank_details.pan_number
+
+    if employee.statutory_details:
+        if employee.statutory_details.pan_number:
+            pan_number = employee.statutory_details.pan_number
+        if employee.statutory_details.uan_number:
+            pf_number = employee.statutory_details.uan_number
 
     employee_data = {
         "employee_code": employee.employee_code,
         "first_name": employee.first_name,
         "last_name": employee.last_name,
-        "designation": employee.designation,
-        "department": employee.department,
+        "designation": designation_name,
+        "department": department_name,
         "date_of_joining": str(employee.date_of_joining) if employee.date_of_joining else "N/A",
-        "bank_account": employee.bank_account if hasattr(employee, 'bank_account') else "N/A",
-        "pan": employee.pan if hasattr(employee, 'pan') else "N/A",
-        "pf_number": employee.pf_number if hasattr(employee, 'pf_number') else "N/A"
+        "bank_account": bank_account,
+        "pan": pan_number,
+        "pf_number": pf_number
     }
 
     tenant_data = {
@@ -855,30 +864,16 @@ def send_bulk_payslips(
             "employee_id": statement.employee_id,
             "month": statement.month,
             "year": statement.year,
-            "days_worked": statement.days_worked,
-            "days_absent": statement.days_absent,
-            "days_half_day": statement.days_half_day,
-            "effective_days": statement.effective_days,
             "total_days": statement.total_days,
+            "present_days": statement.present_days,
+            "absent_days": statement.absent_days,
+            "leave_days": statement.leave_days,
             "basic_salary": statement.basic_salary,
-            "hra": statement.hra,
-            "conveyance_allowance": statement.conveyance_allowance,
-            "medical_allowance": statement.medical_allowance,
-            "special_allowance": statement.special_allowance,
-            "other_allowances": statement.other_allowances,
-            "overtime_amount": statement.overtime_amount,
-            "gross_salary": statement.gross_salary,
-            "pf_employee": statement.pf_employee,
-            "pf_employer": statement.pf_employer,
-            "esi_employee": statement.esi_employee,
-            "esi_employer": statement.esi_employer,
-            "professional_tax": statement.professional_tax,
-            "tds": statement.tds,
-            "loan_deduction": statement.loan_deduction,
-            "advance_deduction": statement.advance_deduction,
-            "other_deductions": statement.other_deductions,
+            "total_earnings": statement.total_earnings,
             "total_deductions": statement.total_deductions,
-            "net_salary": statement.net_salary
+            "net_salary": statement.net_salary,
+            "earnings_breakdown": statement.earnings_breakdown or {},
+            "deductions_breakdown": statement.deductions_breakdown or {}
         }
 
         employee_data = {

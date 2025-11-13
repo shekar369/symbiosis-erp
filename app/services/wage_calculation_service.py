@@ -5,11 +5,10 @@ from typing import Dict, Any, Optional
 from calendar import monthrange
 
 from app.models.wage import WageStatement
-from app.models.employee import Employee
+from app.models.employee import Employee, EmployeeSalaryDetails
 from app.models.attendance import Attendance
 from app.models.overtime import Overtime
 from app.models.advance_loan import Advance, Loan
-from app.models.salary import EmployeeSalaryConfig
 
 
 class WageCalculationService:
@@ -47,13 +46,13 @@ class WageCalculationService:
         if not employee:
             raise ValueError(f"Employee {employee_id} not found")
 
-        # Get salary configuration
-        salary_config = self.db.query(EmployeeSalaryConfig).filter(
-            EmployeeSalaryConfig.employee_id == employee_id
+        # Get salary details
+        salary_details = self.db.query(EmployeeSalaryDetails).filter(
+            EmployeeSalaryDetails.employee_id == employee_id
         ).first()
 
-        if not salary_config:
-            raise ValueError(f"Salary configuration not found for employee {employee_id}")
+        if not salary_details:
+            raise ValueError(f"Salary details not found for employee {employee_id}")
 
         # Calculate working days
         total_days = monthrange(year, month)[1]
@@ -63,13 +62,12 @@ class WageCalculationService:
         days_worked = attendance_data['days_present']
         days_absent = attendance_data['days_absent']
         days_half = attendance_data['days_half_day']
-
         # Calculate effective working days (half day = 0.5)
         effective_days = days_worked + (days_half * 0.5)
 
         # Calculate earnings
         earnings = self.calculate_earnings(
-            salary_config,
+            salary_details,
             effective_days,
             total_days,
             employee_id,
@@ -89,7 +87,49 @@ class WageCalculationService:
         # Calculate net salary
         net_salary = earnings['gross_salary'] - deductions['total_deductions']
 
+        # Prepare data for WageStatement model (matching model field names)
         wage_data = {
+            'employee_id': employee_id,
+            'month': month,
+            'year': year,
+            'total_days': total_days,
+            'present_days': days_worked,
+            'absent_days': days_absent,
+            'leave_days': attendance_data['days_leave'],
+            'basic_salary': earnings['basic_salary'],
+            'total_earnings': earnings['gross_salary'],
+            'total_deductions': deductions['total_deductions'],
+            'net_salary': round(net_salary, 2),
+            'earnings_breakdown': {
+                'basic_salary': earnings['basic_salary'],
+                'hra': earnings['hra'],
+                'conveyance_allowance': earnings['conveyance_allowance'],
+                'medical_allowance': earnings['medical_allowance'],
+                'special_allowance': earnings['special_allowance'],
+                'other_allowances': earnings['other_allowances'],
+                'overtime_amount': earnings['overtime_amount']
+            },
+            'deductions_breakdown': {
+                'pf_employee': deductions['pf_employee'],
+                'pf_employer': deductions['pf_employer'],
+                'esi_employee': deductions['esi_employee'],
+                'esi_employer': deductions['esi_employer'],
+                'professional_tax': deductions['professional_tax'],
+                'tds': deductions['tds'],
+                'loan_deduction': deductions['loan_deduction'],
+                'advance_deduction': deductions['advance_deduction'],
+                'other_deductions': deductions['other_deductions']
+            },
+            'status': 'calculated',
+            'calculated_at': datetime.now()
+        }
+
+        # Create wage statement if requested
+        if create_statement:
+            self.create_wage_statement(wage_data)
+
+        # Return complete wage data for API response (includes all details)
+        return {
             'employee_id': employee_id,
             'month': month,
             'year': year,
@@ -103,12 +143,6 @@ class WageCalculationService:
             'net_salary': round(net_salary, 2),
             'status': 'calculated'
         }
-
-        # Create wage statement if requested
-        if create_statement:
-            self.create_wage_statement(wage_data)
-
-        return wage_data
 
     def get_attendance_data(self, employee_id: int, month: int, year: int) -> Dict[str, int]:
         """Get attendance summary for the month"""
@@ -135,7 +169,7 @@ class WageCalculationService:
 
     def calculate_earnings(
         self,
-        salary_config: EmployeeSalaryConfig,
+        salary_details: EmployeeSalaryDetails,
         effective_days: float,
         total_days: int,
         employee_id: int,
@@ -144,31 +178,29 @@ class WageCalculationService:
     ) -> Dict[str, float]:
         """Calculate all earning components"""
 
-        # Get monthly salary components from config JSON
-        components = salary_config.components or {}
-
+        # Get monthly salary components from salary details
         # Basic salary (pro-rated based on days worked)
-        basic_monthly = components.get('basic', 0)
+        basic_monthly = float(salary_details.basic_salary or 0)
         basic_salary = (basic_monthly / total_days) * effective_days
 
-        # HRA (House Rent Allowance) - typically 40-50% of basic
-        hra_monthly = components.get('hra', basic_monthly * 0.4)
+        # HRA (House Rent Allowance)
+        hra_monthly = float(salary_details.hra or 0)
         hra = (hra_monthly / total_days) * effective_days
 
         # Conveyance Allowance
-        conveyance_monthly = components.get('conveyance', 1600)
+        conveyance_monthly = float(salary_details.conveyance_allowance or 0)
         conveyance = (conveyance_monthly / total_days) * effective_days
 
         # Medical Allowance
-        medical_monthly = components.get('medical', 1250)
+        medical_monthly = float(salary_details.medical_allowance or 0)
         medical = (medical_monthly / total_days) * effective_days
 
         # Special Allowance
-        special_monthly = components.get('special', 0)
+        special_monthly = float(salary_details.special_allowance or 0)
         special = (special_monthly / total_days) * effective_days
 
         # Other Allowances
-        other_monthly = components.get('other', 0)
+        other_monthly = float(salary_details.other_allowance or 0)
         other = (other_monthly / total_days) * effective_days
 
         # Overtime calculation
@@ -335,15 +367,15 @@ class WageCalculationService:
         loans = self.db.query(Loan).filter(
             and_(
                 Loan.employee_id == employee_id,
-                Loan.status == 'active'
+                Loan.status == 'ACTIVE'  # Database stores uppercase
             )
         ).all()
 
         total_deduction = 0
         for loan in loans:
             # Deduct EMI if loan is still active
-            if loan.emi_amount and loan.remaining_amount > 0:
-                total_deduction += loan.emi_amount
+            if loan.monthly_emi and loan.remaining_amount > 0:
+                total_deduction += loan.monthly_emi
 
         return total_deduction
 
@@ -410,7 +442,7 @@ class WageCalculationService:
         employees = self.db.query(Employee).filter(
             and_(
                 Employee.tenant_id == tenant_id,
-                Employee.status == 'active'
+                Employee.status == 'ACTIVE'  # Database stores uppercase
             )
         ).all()
 
@@ -431,6 +463,8 @@ class WageCalculationService:
                     'net_salary': wage_data['net_salary']
                 })
             except Exception as e:
+                # Rollback the failed transaction so other employees can proceed
+                self.db.rollback()
                 failed.append({
                     'employee_id': employee.id,
                     'employee_code': employee.employee_code,

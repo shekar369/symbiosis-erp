@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Download, Calendar, DollarSign } from '../../utils/icons';
-import { MdFilterAlt as Filter, MdSearch as Search } from 'react-icons/md';
+import { MdFilterAlt as Filter, MdSearch as Search, MdClose as Close, MdVisibility as Eye } from 'react-icons/md';
 import api from '../../services/api';
 
 const EmployeePayslips = () => {
@@ -10,6 +10,9 @@ const EmployeePayslips = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [searchTerm, setSearchTerm] = useState('');
   const [downloading, setDownloading] = useState({});
+  const [selectedPayslip, setSelectedPayslip] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   useEffect(() => {
     fetchEmployeeData();
@@ -46,6 +49,25 @@ const EmployeePayslips = () => {
       setPayslips([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewPayslip = async (month, year) => {
+    try {
+      setLoadingDetail(true);
+      setShowModal(true);
+
+      const response = await api.get(`/payroll/wage-statement/${employeeData.id}`, {
+        params: { month, year }
+      });
+
+      setSelectedPayslip(response.data);
+    } catch (error) {
+      console.error('Error fetching payslip details:', error);
+      alert('Failed to load payslip details');
+      setShowModal(false);
+    } finally {
+      setLoadingDetail(false);
     }
   };
 
@@ -111,9 +133,9 @@ const EmployeePayslips = () => {
     years.push(i);
   }
 
-  const totalEarnings = filteredPayslips.reduce((sum, p) => sum + (p.gross_pay || 0), 0);
+  const totalEarnings = filteredPayslips.reduce((sum, p) => sum + (p.total_earnings || 0), 0);
   const totalDeductions = filteredPayslips.reduce((sum, p) => sum + (p.total_deductions || 0), 0);
-  const totalNetPay = filteredPayslips.reduce((sum, p) => sum + (p.net_pay || 0), 0);
+  const totalNetPay = filteredPayslips.reduce((sum, p) => sum + (p.net_salary || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -265,16 +287,16 @@ const EmployeePayslips = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {payslip.days_worked || 0} / {payslip.total_days || 0}
+                      {payslip.present_days || 0} / {payslip.total_days || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                      {formatCurrency(payslip.gross_pay)}
+                      {formatCurrency(payslip.total_earnings)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
                       {formatCurrency(payslip.total_deductions)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">
-                      {formatCurrency(payslip.net_pay)}
+                      {formatCurrency(payslip.net_salary)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(payslip.status)}`}>
@@ -282,24 +304,33 @@ const EmployeePayslips = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {payslip.status === 'Approved' || payslip.status === 'Paid' ? (
-                        <button
-                          onClick={() => handleDownloadPayslip(payslip.month, payslip.year, employeeData.employee_code)}
-                          disabled={downloading[`${payslip.month}-${payslip.year}`]}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {downloading[`${payslip.month}-${payslip.year}`] ? (
-                            <>
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
-                              Downloading...
-                            </>
-                          ) : (
-                            <>
-                              <Download className="w-3 h-3 mr-1" />
-                              Download
-                            </>
-                          )}
-                        </button>
+                      {payslip.status === 'approved' || payslip.status === 'calculated' || payslip.status === 'paid' ? (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleViewPayslip(payslip.month, payslip.year)}
+                            className="inline-flex items-center px-3 py-1.5 border border-blue-600 text-xs font-medium rounded text-blue-600 bg-white hover:bg-blue-50"
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
+                          </button>
+                          <button
+                            onClick={() => handleDownloadPayslip(payslip.month, payslip.year, employeeData.employee_code)}
+                            disabled={downloading[`${payslip.month}-${payslip.year}`]}
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {downloading[`${payslip.month}-${payslip.year}`] ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                                Downloading...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="w-3 h-3 mr-1" />
+                                Download
+                              </>
+                            )}
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-gray-400 text-xs">Not available</span>
                       )}
@@ -339,6 +370,174 @@ const EmployeePayslips = () => {
           </div>
         </div>
       </div>
+
+      {/* Payslip Detail Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowModal(false)}></div>
+
+            {/* Modal panel */}
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+              {loadingDetail ? (
+                <div className="flex items-center justify-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                </div>
+              ) : selectedPayslip ? (
+                <>
+                  {/* Header */}
+                  <div className="bg-blue-600 px-6 py-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-white">
+                        Payslip Details - {getMonthName(selectedPayslip.period.month)} {selectedPayslip.period.year}
+                      </h3>
+                      <button
+                        onClick={() => setShowModal(false)}
+                        className="text-white hover:text-gray-200"
+                      >
+                        <Close className="w-6 h-6" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+                    {/* Employee Info */}
+                    <div className="mb-6 bg-gray-50 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Employee Information</h4>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Employee Code:</span>
+                          <span className="ml-2 font-medium">{selectedPayslip.employee.code}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Name:</span>
+                          <span className="ml-2 font-medium">{selectedPayslip.employee.name}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Designation:</span>
+                          <span className="ml-2 font-medium">{selectedPayslip.employee.designation || 'N/A'}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Department:</span>
+                          <span className="ml-2 font-medium">{selectedPayslip.employee.department || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Attendance */}
+                    <div className="mb-6">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Attendance Summary</h4>
+                      <div className="grid grid-cols-4 gap-4">
+                        <div className="bg-blue-50 rounded-lg p-3 text-center">
+                          <div className="text-2xl font-bold text-blue-600">{selectedPayslip.attendance.total_days}</div>
+                          <div className="text-xs text-gray-600 mt-1">Total Days</div>
+                        </div>
+                        <div className="bg-green-50 rounded-lg p-3 text-center">
+                          <div className="text-2xl font-bold text-green-600">{selectedPayslip.attendance.present_days}</div>
+                          <div className="text-xs text-gray-600 mt-1">Present Days</div>
+                        </div>
+                        <div className="bg-red-50 rounded-lg p-3 text-center">
+                          <div className="text-2xl font-bold text-red-600">{selectedPayslip.attendance.absent_days}</div>
+                          <div className="text-xs text-gray-600 mt-1">Absent Days</div>
+                        </div>
+                        <div className="bg-yellow-50 rounded-lg p-3 text-center">
+                          <div className="text-2xl font-bold text-yellow-600">{selectedPayslip.attendance.leave_days}</div>
+                          <div className="text-xs text-gray-600 mt-1">Leave Days</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Earnings and Deductions */}
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                      {/* Earnings */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Earnings</h4>
+                        <div className="bg-green-50 rounded-lg p-4">
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700">Basic Salary:</span>
+                              <span className="font-medium">{formatCurrency(selectedPayslip.earnings.basic_salary)}</span>
+                            </div>
+                            {selectedPayslip.earnings.breakdown && Object.entries(selectedPayslip.earnings.breakdown).map(([key, value]) => (
+                              value > 0 && (
+                                <div key={key} className="flex justify-between text-sm">
+                                  <span className="text-gray-700">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                                  <span className="font-medium">{formatCurrency(value)}</span>
+                                </div>
+                              )
+                            ))}
+                            <div className="pt-2 mt-2 border-t border-green-200">
+                              <div className="flex justify-between text-sm font-bold">
+                                <span className="text-gray-700">Total Earnings:</span>
+                                <span className="text-green-600">{formatCurrency(selectedPayslip.earnings.total_earnings)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Deductions */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Deductions</h4>
+                        <div className="bg-red-50 rounded-lg p-4">
+                          <div className="space-y-2">
+                            {selectedPayslip.deductions.breakdown && Object.entries(selectedPayslip.deductions.breakdown).map(([key, value]) => (
+                              value > 0 && (
+                                <div key={key} className="flex justify-between text-sm">
+                                  <span className="text-gray-700">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                                  <span className="font-medium">{formatCurrency(value)}</span>
+                                </div>
+                              )
+                            ))}
+                            {(!selectedPayslip.deductions.breakdown || Object.keys(selectedPayslip.deductions.breakdown).length === 0) && (
+                              <div className="text-sm text-gray-500 text-center py-2">No deductions</div>
+                            )}
+                            <div className="pt-2 mt-2 border-t border-red-200">
+                              <div className="flex justify-between text-sm font-bold">
+                                <span className="text-gray-700">Total Deductions:</span>
+                                <span className="text-red-600">{formatCurrency(selectedPayslip.deductions.total_deductions)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Net Salary */}
+                    <div className="bg-blue-600 rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-white text-lg font-semibold">Net Salary (Take Home):</span>
+                        <span className="text-white text-2xl font-bold">{formatCurrency(selectedPayslip.net_salary)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+                    <button
+                      onClick={() => setShowModal(false)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDownloadPayslip(selectedPayslip.period.month, selectedPayslip.period.year, selectedPayslip.employee.code);
+                      }}
+                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Download className="w-4 h-4 inline mr-2" />
+                      Download PDF
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

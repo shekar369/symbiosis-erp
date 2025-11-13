@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, Dict, Any
 
+# Wage statement schemas for payroll processing
 
 class WageStatementBase(BaseModel):
     employee_id: int

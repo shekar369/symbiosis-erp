@@ -20,6 +20,8 @@ class Advance(Base):
     date = Column(Date, nullable=False)
     reason = Column(String)
     approved_by = Column(Integer, ForeignKey("users.id"))
+    status = Column(String, default='pending')
+    recovery_amount = Column(Float, default=0)
     deducted_amount = Column(Float, default=0)
     remaining_amount = Column(Float)
     created_at = Column(DateTime, default=datetime.utcnow)

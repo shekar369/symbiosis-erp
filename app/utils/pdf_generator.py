@@ -128,17 +128,16 @@ class PDFGenerator:
 
         # Attendance Summary
         attendance_data = [
-            ['Total Days', 'Days Worked', 'Days Absent', 'Half Days', 'Effective Days'],
+            ['Total Days', 'Present Days', 'Absent Days', 'Leave Days'],
             [
                 str(wage_statement.get('total_days', 30)),
-                str(wage_statement.get('days_worked', 0)),
-                str(wage_statement.get('days_absent', 0)),
-                str(wage_statement.get('days_half_day', 0)),
-                f"{wage_statement.get('effective_days', 0):.1f}"
+                str(wage_statement.get('present_days', 0)),
+                str(wage_statement.get('absent_days', 0)),
+                str(wage_statement.get('leave_days', 0))
             ]
         ]
 
-        attendance_table = Table(attendance_data, colWidths=[1.4*inch]*5)
+        attendance_table = Table(attendance_data, colWidths=[1.75*inch]*4)
         attendance_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -159,26 +158,27 @@ class PDFGenerator:
             ['EARNINGS', 'AMOUNT (₹)', 'DEDUCTIONS', 'AMOUNT (₹)']
         ]
 
-        # Earnings rows
-        earnings_items = [
-            ('Basic Salary', wage_statement.get('basic_salary', 0)),
-            ('HRA', wage_statement.get('hra', 0)),
-            ('Conveyance Allowance', wage_statement.get('conveyance_allowance', 0)),
-            ('Medical Allowance', wage_statement.get('medical_allowance', 0)),
-            ('Special Allowance', wage_statement.get('special_allowance', 0)),
-            ('Other Allowances', wage_statement.get('other_allowances', 0)),
-            ('Overtime', wage_statement.get('overtime_amount', 0)),
-        ]
+        # Get breakdowns from JSON fields or use defaults
+        earnings_breakdown = wage_statement.get('earnings_breakdown', {})
+        deductions_breakdown = wage_statement.get('deductions_breakdown', {})
 
-        deductions_items = [
-            ('PF (Employee)', wage_statement.get('pf_employee', 0)),
-            ('ESI (Employee)', wage_statement.get('esi_employee', 0)),
-            ('Professional Tax', wage_statement.get('professional_tax', 0)),
-            ('TDS', wage_statement.get('tds', 0)),
-            ('Loan Deduction', wage_statement.get('loan_deduction', 0)),
-            ('Advance Deduction', wage_statement.get('advance_deduction', 0)),
-            ('Other Deductions', wage_statement.get('other_deductions', 0)),
-        ]
+        # Build earnings items from breakdown
+        earnings_items = [('Basic Salary', wage_statement.get('basic_salary', 0))]
+        if isinstance(earnings_breakdown, dict):
+            for key, value in earnings_breakdown.items():
+                if key != 'basic_salary' and value and value > 0:
+                    # Format key nicely
+                    formatted_key = key.replace('_', ' ').title()
+                    earnings_items.append((formatted_key, value))
+
+        # Build deductions items from breakdown
+        deductions_items = []
+        if isinstance(deductions_breakdown, dict):
+            for key, value in deductions_breakdown.items():
+                if value and value > 0:
+                    # Format key nicely
+                    formatted_key = key.replace('_', ' ').title()
+                    deductions_items.append((formatted_key, value))
 
         # Combine earnings and deductions side by side
         max_rows = max(len(earnings_items), len(deductions_items))
@@ -202,8 +202,8 @@ class PDFGenerator:
 
         # Totals row
         salary_data.append([
-            'GROSS SALARY',
-            f"{wage_statement.get('gross_salary', 0):,.2f}",
+            'TOTAL EARNINGS',
+            f"{wage_statement.get('total_earnings', 0):,.2f}",
             'TOTAL DEDUCTIONS',
             f"{wage_statement.get('total_deductions', 0):,.2f}"
         ])
@@ -252,28 +252,7 @@ class PDFGenerator:
             ('ALIGN', (3, -1), (3, -1), 'RIGHT'),
         ]))
         elements.append(salary_table)
-        elements.append(Spacer(1, 0.3*inch))
-
-        # Employer Contributions (Optional info box)
-        employer_data = [
-            ['Employer Contributions', ''],
-            ['PF (Employer)', f"₹ {wage_statement.get('pf_employer', 0):,.2f}"],
-            ['ESI (Employer)', f"₹ {wage_statement.get('esi_employer', 0):,.2f}"],
-        ]
-
-        employer_table = Table(employer_data, colWidths=[5*inch, 2*inch])
-        employer_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e0e7ff')),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ALIGN', (1, 1), (1, -1), 'RIGHT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ]))
-        elements.append(employer_table)
-        elements.append(Spacer(1, 0.4*inch))
+        elements.append(Spacer(1, 0.5*inch))
 
         # Footer
         footer_text = Paragraph(
@@ -356,19 +335,22 @@ class PDFGenerator:
         total_net = 0
 
         for idx, ws in enumerate(wage_statements, 1):
-            gross = ws.get('gross_salary', 0)
-            pf = ws.get('pf_employee', 0)
-            esi = ws.get('esi_employee', 0)
-            pt = ws.get('professional_tax', 0)
-            tds = ws.get('tds', 0)
-            other = ws.get('loan_deduction', 0) + ws.get('advance_deduction', 0) + ws.get('other_deductions', 0)
+            gross = ws.get('total_earnings', 0)
+            deductions_breakdown = ws.get('deductions_breakdown', {})
+
+            # Extract deductions from breakdown if available
+            pf = deductions_breakdown.get('pf_employee', 0) if isinstance(deductions_breakdown, dict) else 0
+            esi = deductions_breakdown.get('esi_employee', 0) if isinstance(deductions_breakdown, dict) else 0
+            pt = deductions_breakdown.get('professional_tax', 0) if isinstance(deductions_breakdown, dict) else 0
+            tds = deductions_breakdown.get('tds', 0) if isinstance(deductions_breakdown, dict) else 0
+            other = deductions_breakdown.get('loan_deduction', 0) + deductions_breakdown.get('advance_deduction', 0) + deductions_breakdown.get('other_deductions', 0) if isinstance(deductions_breakdown, dict) else 0
             net = ws.get('net_salary', 0)
 
             register_data.append([
                 str(idx),
                 ws.get('employee_code', ''),
                 ws.get('employee_name', ''),
-                f"{ws.get('effective_days', 0):.1f}",
+                f"{ws.get('present_days', 0)}",
                 f"{gross:,.0f}",
                 f"{pf:,.0f}",
                 f"{esi:,.0f}",

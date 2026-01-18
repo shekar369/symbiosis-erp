@@ -115,7 +115,7 @@ def process_bulk_payroll(
         )
 
 
-@router.get("/wage-statements", response_model=List[WageStatementResponse])
+@router.get("/wage-statements")
 def get_wage_statements(
     month: Optional[int] = Query(None, ge=1, le=12),
     year: Optional[int] = Query(None, ge=2020, le=2030),
@@ -126,7 +126,7 @@ def get_wage_statements(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get wage statements with filters"""
+    """Get wage statements with filters - includes employee names"""
     query = db.query(WageStatement).join(Employee).filter(
         Employee.tenant_id == current_user.tenant_id
     )
@@ -141,7 +141,37 @@ def get_wage_statements(
         query = query.filter(WageStatement.status == status)
 
     statements = query.offset(skip).limit(limit).all()
-    return statements
+
+    # Enrich with employee information
+    result = []
+    for statement in statements:
+        employee = db.query(Employee).filter(Employee.id == statement.employee_id).first()
+
+        statement_dict = {
+            "id": statement.id,
+            "employee_id": statement.employee_id,
+            "employee_code": employee.employee_code if employee else "N/A",
+            "employee_name": f"{employee.first_name} {employee.last_name}" if employee else "Unknown",
+            "month": statement.month,
+            "year": statement.year,
+            "total_days": statement.total_days,
+            "present_days": statement.present_days,
+            "absent_days": statement.absent_days,
+            "leave_days": statement.leave_days,
+            "basic_salary": statement.basic_salary,
+            "total_earnings": statement.total_earnings,
+            "total_deductions": statement.total_deductions,
+            "net_salary": statement.net_salary,
+            "status": statement.status,
+            "calculated_at": statement.calculated_at.isoformat() if statement.calculated_at else None,
+            "approved_at": statement.approved_at.isoformat() if statement.approved_at else None,
+            "paid_at": statement.paid_at.isoformat() if statement.paid_at else None,
+            "created_at": statement.created_at.isoformat() if statement.created_at else None,
+            "updated_at": statement.updated_at.isoformat() if statement.updated_at else None
+        }
+        result.append(statement_dict)
+
+    return result
 
 
 @router.get("/wage-statement/{employee_id}")

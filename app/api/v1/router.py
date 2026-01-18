@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     leave,
     payroll,
     holidays,
+    working_calendar,
     shifts,
     reports,
     admin,
@@ -44,6 +45,7 @@ api_router.include_router(wage.router, prefix="/wages", tags=["wages"])
 api_router.include_router(leave.router, prefix="/leaves", tags=["leaves"])
 api_router.include_router(payroll.router, prefix="/payroll", tags=["payroll"])
 api_router.include_router(holidays.router, prefix="/holidays", tags=["holidays"])
+api_router.include_router(working_calendar.router, prefix="/working-calendar", tags=["working-calendar"])
 api_router.include_router(shifts.router, prefix="/shifts", tags=["shifts"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])

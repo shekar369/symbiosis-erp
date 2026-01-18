@@ -1,1 +1,0 @@
-ALTER USER postgres WITH PASSWORD 'hrpayroll2024';

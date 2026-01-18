@@ -59,11 +59,13 @@ class WageCalculationService:
 
         # Get attendance data
         attendance_data = self.get_attendance_data(employee_id, month, year)
-        days_worked = attendance_data['days_present']
+        # Use paid_full_days (present + leave + weekly_off + holiday) instead of just days_present
+        days_paid_full = attendance_data['paid_full_days']
         days_absent = attendance_data['days_absent']
         days_half = attendance_data['days_half_day']
         # Calculate effective working days (half day = 0.5)
-        effective_days = days_worked + (days_half * 0.5)
+        # Paid full days + half of half-days
+        effective_days = days_paid_full + (days_half * 0.5)
 
         # Calculate earnings
         earnings = self.calculate_earnings(
@@ -88,12 +90,13 @@ class WageCalculationService:
         net_salary = earnings['gross_salary'] - deductions['total_deductions']
 
         # Prepare data for WageStatement model (matching model field names)
+        # present_days now includes: actual present days + leave + weekly_off + holiday (all paid days)
         wage_data = {
             'employee_id': employee_id,
             'month': month,
             'year': year,
             'total_days': total_days,
-            'present_days': days_worked,
+            'present_days': int(effective_days),  # Store effective paid days (rounded down)
             'absent_days': days_absent,
             'leave_days': attendance_data['days_leave'],
             'basic_salary': earnings['basic_salary'],
@@ -133,10 +136,13 @@ class WageCalculationService:
             'employee_id': employee_id,
             'month': month,
             'year': year,
-            'days_worked': days_worked,
+            'days_present': attendance_data['days_present'],  # Actual present days
+            'days_leave': attendance_data['days_leave'],
+            'days_weekly_off': attendance_data.get('days_weekly_off', 0),
+            'days_holiday': attendance_data.get('days_holiday', 0),
             'days_absent': days_absent,
             'days_half_day': days_half,
-            'effective_days': effective_days,
+            'effective_days': effective_days,  # Total paid days (for salary calculation)
             'total_days': total_days,
             **earnings,
             **deductions,
@@ -145,7 +151,13 @@ class WageCalculationService:
         }
 
     def get_attendance_data(self, employee_id: int, month: int, year: int) -> Dict[str, int]:
-        """Get attendance summary for the month"""
+        """
+        Get attendance summary for the month
+
+        Paid days include: present, leave, weekly_off, holiday
+        Unpaid days: absent
+        Half days count as 0.5
+        """
         attendances = self.db.query(Attendance).filter(
             and_(
                 Attendance.employee_id == employee_id,
@@ -156,14 +168,24 @@ class WageCalculationService:
 
         days_present = sum(1 for a in attendances if a.status == 'present')
         days_absent = sum(1 for a in attendances if a.status == 'absent')
-        days_half_day = sum(1 for a in attendances if a.status == 'half-day')
+        days_half_day = sum(1 for a in attendances if a.status == 'half_day')
         days_leave = sum(1 for a in attendances if a.status == 'leave')
+        days_weekly_off = sum(1 for a in attendances if a.status == 'weekly_off')
+        days_holiday = sum(1 for a in attendances if a.status == 'holiday')
+
+        # Calculate effective paid days
+        # Present + Leave + Weekly Off + Holiday + (Half Day * 0.5)
+        # Absent days are NOT counted as paid
+        paid_full_days = days_present + days_leave + days_weekly_off + days_holiday
 
         return {
             'days_present': days_present,
             'days_absent': days_absent,
             'days_half_day': days_half_day,
             'days_leave': days_leave,
+            'days_weekly_off': days_weekly_off,
+            'days_holiday': days_holiday,
+            'paid_full_days': paid_full_days,
             'total_recorded': len(attendances)
         }
 

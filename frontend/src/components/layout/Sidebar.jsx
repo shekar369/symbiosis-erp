@@ -29,6 +29,7 @@ const Sidebar = () => {
     { path: '/employees', icon: Users, label: 'Employees' },
     { path: '/locations', icon: MapPin, label: 'Locations' },
     { path: '/attendance', icon: Calendar, label: 'Attendance' },
+    { path: '/holidays', icon: CalendarDays, label: 'Holiday Calendar' },
     { path: '/payroll', icon: Calculator, label: 'Payroll' },
     { path: '/bank-transfer', icon: Building2, label: 'Bank Transfer' },
     { path: '/statutory', icon: FileCheck, label: 'Statutory' },

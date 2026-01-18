@@ -222,13 +222,25 @@ Access the application:
 
 ## Default Test Credentials
 
-After running `python scripts/create_test_users.py`, the following test accounts are available:
+**✅ Database Verified - Last Updated: December 13, 2025**
 
-| Username | Password | Role | Tenant | Access Level |
-|----------|----------|------|--------|--------------|
-| `saasadmin` | `admin123` | SaaS Admin | All | Full system access across all tenants |
-| `employer` | `employer123` | Employer Admin | 2 (ABC Corp) | Manage employees, payroll, attendance |
-| `employee1` | `employee123` | Employee | 2 (ABC Corp) | Self-service portal access |
+The following test accounts are available in the database:
+
+| Username | Password | Role | Tenant | Full Name | Access Level |
+|----------|----------|------|--------|-----------|--------------|
+| `admin` | `admin123` | System Admin | 1 (Test Company) | Test Admin | Full system administration |
+| `employer` | `employer123` | Employer Admin | 2 (Tech Innovate) | Ravi Krishnan | Complete HR/Payroll management |
+| `hrmanager` | `hr_manager123` | HR Manager | 2 (Tech Innovate) | Meera Lakshmi | HR operations & employee management |
+| `employee` | `employee123` | Employee | 2 (Tech Innovate) | Rajesh Kumar | Self-service portal access |
+
+**Test Data Available:**
+- 2 Tenants configured
+- 4 User accounts with role-based access
+- 11 Employees (10 from Tech Innovate + 1 from Test Company)
+- 18 Indian holidays for 2025
+- Complete salary, bank, and statutory details for all employees
+
+**📄 For complete credentials and testing guide, see:** [TEST_CREDENTIALS.md](TEST_CREDENTIALS.md)
 
 ## API Documentation
 

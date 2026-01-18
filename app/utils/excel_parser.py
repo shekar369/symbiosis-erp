@@ -298,3 +298,71 @@ class ExcelParser:
 
         except Exception as e:
             raise Exception(f"Error parsing attendance file: {str(e)}")
+
+    @staticmethod
+    def parse_wages_file(file_path: str, validate: bool = True) -> Tuple[List[Dict[str, Any]], List[ValidationError]]:
+        """
+        Parse wages Excel file with validation
+        Expected columns: Employee Code, Basic Salary, HRA, etc.
+        Returns: (valid_records, errors)
+        """
+        try:
+            # Read Excel file, skip first 4 rows (title, company info, empty, headers at row 5)
+            df = pd.read_excel(file_path, header=4)
+
+            # Remove completely empty rows
+            df = df.dropna(how='all')
+
+            valid_records = []
+            errors = []
+
+            # Define numeric fields
+            numeric_fields = {
+                'Basic Salary': 'basic_salary',
+                'HRA': 'hra',
+                'Conveyance': 'conveyance_allowance',
+                'Special Allowance': 'special_allowance',
+                'Other Allowance': 'other_allowance',
+                'PF Employee': 'pf_employee',
+                'PF Employer': 'pf_employer',
+                'ESI Employee': 'esic_employee',
+                'ESI Employer': 'esic_employer',
+                'PT': 'professional_tax',
+                'TDS': 'tds',
+                'Net Salary': 'net_salary'
+            }
+
+            # Process each row
+            for idx, row in df.iterrows():
+                row_num = idx + 6  # Account for header rows
+                record = {}
+                row_errors = []
+
+                # Employee Code - required
+                emp_code = row.get('Employee Code')
+                if pd.isna(emp_code) or not emp_code:
+                    row_errors.append(ValidationError(row_num, 'Employee Code', emp_code, "Employee code is required"))
+                else:
+                    record['employee_code'] = str(emp_code).strip()
+
+                # Process numeric fields
+                for excel_col, db_field in numeric_fields.items():
+                    value = row.get(excel_col)
+                    if pd.isna(value) or value == '':
+                        record[db_field] = 0.0
+                    else:
+                        try:
+                            record[db_field] = float(value)
+                        except ValueError:
+                            row_errors.append(ValidationError(row_num, excel_col, value, "Must be a valid number"))
+
+                # Add row to appropriate list
+                if row_errors:
+                    errors.extend(row_errors)
+                else:
+                    valid_records.append(record)
+
+            return valid_records, errors
+
+        except Exception as e:
+            raise Exception(f"Error parsing wages file: {str(e)}")

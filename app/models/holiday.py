@@ -22,7 +22,6 @@ class WorkingCalendar(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
-    name = Column(String, nullable=False)
     monday = Column(Boolean, default=True)
     tuesday = Column(Boolean, default=True)
     wednesday = Column(Boolean, default=True)

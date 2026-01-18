@@ -21,6 +21,8 @@ import EmployeeDashboard from './pages/employee/EmployeeDashboard';
 import EmployeePayslips from './pages/employee/EmployeePayslips';
 import EmployeeLeave from './pages/employee/EmployeeLeave';
 import EmployeeProfile from './pages/employee/EmployeeProfile';
+import PayrollDashboard from './pages/employer/PayrollDashboard';
+import HolidayCalendar from './pages/employer/HolidayCalendar';
 
 function App() {
   return (
@@ -45,6 +47,8 @@ function App() {
             <Route path="locations" element={<Locations />} />
             <Route path="attendance" element={<Attendance />} />
             <Route path="payroll" element={<Payroll />} />
+            <Route path="payroll-management" element={<PayrollDashboard />} />
+            <Route path="holidays" element={<HolidayCalendar />} />
             <Route path="statutory" element={<Statutory />} />
             <Route path="bank-transfer" element={<BankTransfer />} />
             <Route path="wages" element={<Wages />} />

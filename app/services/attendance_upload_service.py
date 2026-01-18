@@ -2,10 +2,13 @@ from typing import Dict, List, Tuple, Optional
 from datetime import datetime, date, time
 from openpyxl import load_workbook
 from sqlalchemy.orm import Session
+from sqlalchemy import extract
 import logging
+import calendar
 
 from app.models.attendance import AttendanceStatus
 from app.models.employee import Employee
+from app.models.holiday import Holiday, WorkingCalendar
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +31,53 @@ class AttendanceUploadService:
         self.tenant_id = tenant_id
         self.errors = []
         self.warnings = []
+        self.holidays_cache = {}  # Cache holidays by month
+        self.working_calendar = None  # Will be loaded when needed
+
+    def _get_holidays_for_month(self, month: int, year: int) -> Dict[int, Holiday]:
+        """Get holidays for the specified month (with caching)"""
+        cache_key = f"{year}-{month}"
+        if cache_key not in self.holidays_cache:
+            holidays = self.db.query(Holiday).filter(
+                Holiday.tenant_id == self.tenant_id,
+                extract('month', Holiday.date) == month,
+                extract('year', Holiday.date) == year
+            ).all()
+
+            # Map by day number
+            self.holidays_cache[cache_key] = {holiday.date.day: holiday for holiday in holidays}
+
+        return self.holidays_cache[cache_key]
+
+    def _get_working_calendar(self) -> Optional[WorkingCalendar]:
+        """Get the working calendar configuration for the tenant"""
+        if self.working_calendar is None:
+            self.working_calendar = self.db.query(WorkingCalendar).filter(
+                WorkingCalendar.tenant_id == self.tenant_id
+            ).first()
+        return self.working_calendar
+
+    def _is_weekend(self, date_obj: date) -> bool:
+        """Check if a date is a weekend based on working calendar"""
+        working_calendar = self._get_working_calendar()
+
+        if not working_calendar:
+            # Default: Saturday and Sunday are weekends
+            return date_obj.weekday() in [5, 6]
+
+        weekday = date_obj.weekday()
+        day_mapping = {
+            0: working_calendar.monday,
+            1: working_calendar.tuesday,
+            2: working_calendar.wednesday,
+            3: working_calendar.thursday,
+            4: working_calendar.friday,
+            5: working_calendar.saturday,
+            6: working_calendar.sunday
+        }
+
+        # If day is marked as False in calendar, it's a weekend
+        return not day_mapping.get(weekday, True)
 
     def parse_attendance_file(self, file_path: str) -> Tuple[List[Dict], Dict]:
         """
@@ -167,8 +217,10 @@ class AttendanceUploadService:
         year = month_year["year"]
         month = month_year["month"]
 
+        # Get holidays for this month
+        holidays = self._get_holidays_for_month(month, year)
+
         # Determine number of days in the month
-        import calendar
         days_in_month = calendar.monthrange(year, month)[1]
 
         # Process each day (columns start from 4, representing day 1)
@@ -178,24 +230,57 @@ class AttendanceUploadService:
             if col_idx > ws.max_column:
                 break
 
+            attendance_date = date(year, month, day)
             cell_value = ws.cell(row=row_idx, column=col_idx).value
 
-            # Skip empty cells
-            if not cell_value:
-                continue
+            # Auto-mark holidays (even if cell is empty)
+            if day in holidays:
+                if not cell_value or str(cell_value).strip() == "":
+                    # Auto-mark as holiday
+                    status = AttendanceStatus.HOLIDAY
+                else:
+                    # Employee worked on holiday - use provided status
+                    status_code = str(cell_value).strip().upper()
+                    status = self.STATUS_MAPPING.get(status_code)
+                    if not status:
+                        self.warnings.append(
+                            f"Row {row_idx}, Day {day}: Unknown status code '{status_code}' on holiday, auto-marking as HOLIDAY"
+                        )
+                        status = AttendanceStatus.HOLIDAY
 
-            # Map Excel code to AttendanceStatus
-            status_code = str(cell_value).strip().upper()
-            status = self.STATUS_MAPPING.get(status_code)
+            # Auto-mark weekends (even if cell is empty)
+            elif self._is_weekend(attendance_date):
+                if not cell_value or str(cell_value).strip() == "":
+                    # Auto-mark as weekly off
+                    status = AttendanceStatus.WEEKLY_OFF
+                else:
+                    # Employee worked on weekend - use provided status
+                    status_code = str(cell_value).strip().upper()
+                    status = self.STATUS_MAPPING.get(status_code)
+                    if not status:
+                        self.warnings.append(
+                            f"Row {row_idx}, Day {day}: Unknown status code '{status_code}' on weekend, auto-marking as WEEKLY_OFF"
+                        )
+                        status = AttendanceStatus.WEEKLY_OFF
 
-            if not status:
-                self.warnings.append(
-                    f"Row {row_idx}, Day {day}: Unknown status code '{status_code}', skipping"
-                )
-                continue
+            # Regular working day - cell must have a value
+            else:
+                # Skip empty cells on regular working days
+                if not cell_value or str(cell_value).strip() == "":
+                    continue
+
+                # Map Excel code to AttendanceStatus
+                status_code = str(cell_value).strip().upper()
+                status = self.STATUS_MAPPING.get(status_code)
+
+                if not status:
+                    self.warnings.append(
+                        f"Row {row_idx}, Day {day}: Unknown status code '{status_code}', skipping"
+                    )
+                    continue
 
             # Create attendance record
-            attendance_date = date(year, month, day)
+            # (attendance_date already defined above)
 
             # Set check_in and check_out times based on status
             check_in_time = None

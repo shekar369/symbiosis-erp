@@ -6,7 +6,7 @@ import tempfile
 
 from app.api.dependencies import get_db, get_current_active_user
 from app.models.user import User
-from app.models.employee import Employee, EmployeeStatus
+from app.models.employee import Employee, EmployeeStatus, EmployeeSalaryDetails
 from app.models.attendance import Attendance
 from app.models.organization import Department, Designation, Grade
 from app.utils.excel_parser import ExcelParser
@@ -245,6 +245,145 @@ async def upload_attendance(
         return {
             "success": True,
             "message": f"Upload complete. {uploaded_count} attendance records processed, {failed_count} failed.",
+            "summary": {
+                "total_rows": len(valid_records) + len(validation_errors),
+                "uploaded": uploaded_count,
+                "failed": failed_count,
+                "validation_errors": len(validation_errors)
+            },
+            "errors": errors_list[:100]  # Return first 100 errors
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing file: {str(e)}"
+        )
+    finally:
+        # Clean up temporary file
+        if os.path.exists(tmp_file_path):
+            os.remove(tmp_file_path)
+
+
+@router.post("/wages")
+async def upload_wages(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Upload wages data from Excel file
+    Returns summary of uploaded, failed, and validation errors
+    """
+    # Validate file type
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only Excel files (.xlsx, .xls) are supported"
+        )
+
+    # Save uploaded file temporarily
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+        content = await file.read()
+        tmp_file.write(content)
+        tmp_file_path = tmp_file.name
+
+    try:
+        # Parse and validate Excel file
+        valid_records, validation_errors = ExcelParser.parse_wages_file(tmp_file_path)
+
+        uploaded_count = 0
+        failed_count = 0
+        errors_list = []
+
+        # Convert validation errors to dict
+        for error in validation_errors:
+            errors_list.append(error.to_dict())
+
+        # Process valid records
+        for record in valid_records:
+            try:
+                # Find employee by code
+                employee = db.query(Employee).filter(
+                    Employee.employee_code == record['employee_code'],
+                    Employee.tenant_id == current_user.tenant_id
+                ).first()
+
+                if not employee:
+                    errors_list.append({
+                        "row": "N/A",
+                        "column": "employee_code",
+                        "value": record['employee_code'],
+                        "error": "Employee not found"
+                    })
+                    failed_count += 1
+                    continue
+
+                # Check if salary details already exist
+                salary_details = db.query(EmployeeSalaryDetails).filter(
+                    EmployeeSalaryDetails.employee_id == employee.id
+                ).first()
+
+                if not salary_details:
+                    salary_details = EmployeeSalaryDetails(employee_id=employee.id)
+                    db.add(salary_details)
+
+                # Update fields
+                salary_details.basic_salary = record.get('basic_salary', 0)
+                salary_details.hra = record.get('hra', 0)
+                salary_details.conveyance_allowance = record.get('conveyance_allowance', 0)
+                salary_details.special_allowance = record.get('special_allowance', 0)
+                salary_details.other_allowance = record.get('other_allowance', 0)
+                salary_details.pf_employee = record.get('pf_employee', 0)
+                salary_details.pf_employer = record.get('pf_employer', 0)
+                salary_details.esic_employee = record.get('esic_employee', 0)
+                salary_details.esic_employer = record.get('esic_employer', 0)
+                salary_details.professional_tax = record.get('professional_tax', 0)
+                salary_details.tds = record.get('tds', 0)
+                
+                # Recalculate totals
+                salary_details.gross_salary = (
+                    salary_details.basic_salary + 
+                    salary_details.hra + 
+                    salary_details.conveyance_allowance + 
+                    salary_details.special_allowance + 
+                    salary_details.other_allowance
+                )
+                
+                salary_details.total_deductions = (
+                    salary_details.pf_employee + 
+                    salary_details.esic_employee + 
+                    salary_details.professional_tax + 
+                    salary_details.tds
+                )
+                
+                salary_details.net_salary = salary_details.gross_salary - salary_details.total_deductions
+                
+                # CTC Calculation (Gross + Employer Contributions)
+                salary_details.ctc = (
+                    salary_details.gross_salary + 
+                    salary_details.pf_employer + 
+                    salary_details.esic_employer
+                )
+
+                uploaded_count += 1
+
+            except Exception as e:
+                errors_list.append({
+                    "row": "N/A",
+                    "column": "general",
+                    "value": record.get('employee_code', 'Unknown'),
+                    "error": str(e)
+                })
+                failed_count += 1
+
+        # Commit all successful inserts/updates
+        if uploaded_count > 0:
+            db.commit()
+
+        return {
+            "success": True,
+            "message": f"Upload complete. {uploaded_count} wage records processed, {failed_count} failed.",
             "summary": {
                 "total_rows": len(valid_records) + len(validation_errors),
                 "uploaded": uploaded_count,

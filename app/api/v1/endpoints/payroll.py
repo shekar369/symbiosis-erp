@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, extract
 from typing import List, Optional
 from pydantic import BaseModel
+import calendar
 
 from app.api.dependencies import get_db, get_current_active_user
 from app.models.user import User
@@ -210,33 +211,110 @@ def get_employee_wage_statement(
     deductions_breakdown = statement.deductions_breakdown or {}
 
     # Get designation and department names
-    designation_name = employee.designation.name if employee.designation else None
-    department_name = employee.department.name if employee.department else None
+    designation_name = employee.designation.name if employee.designation else "N/A"
+    department_name = employee.department.name if employee.department else "N/A"
+
+    # Get bank details
+    bank_account = "N/A"
+    bank_name = "N/A"
+    branch_name = ""
+    pan_number = "N/A"
+
+    if employee.bank_details:
+        bank_account = employee.bank_details.account_number or "N/A"
+        bank_name = employee.bank_details.bank_name or "N/A"
+        branch_name = employee.bank_details.branch_name or ""
+        if employee.bank_details.pan_number:
+            pan_number = employee.bank_details.pan_number
+
+    # Get statutory details
+    uan_number = "N/A"
+    esi_number = "N/A"
+
+    if employee.statutory_details:
+        if employee.statutory_details.pan_number:
+            pan_number = employee.statutory_details.pan_number
+        if employee.statutory_details.uan_number:
+            uan_number = employee.statutory_details.uan_number
+        if employee.statutory_details.esic_number:
+            esi_number = employee.statutory_details.esic_number
+
+    # Get CTC
+    ctc = 0
+    if employee.salary_details:
+        ctc = float(employee.salary_details.ctc or 0)
+
+    # Get leave details
+    from app.models.leave import LeaveBalance
+    leave_balances = db.query(LeaveBalance).filter(
+        LeaveBalance.employee_id == employee_id,
+        LeaveBalance.year == statement.year
+    ).all()
+    total_accumulated = sum(lb.total_days for lb in leave_balances) if leave_balances else 15
+    total_used = sum(lb.used_days for lb in leave_balances) if leave_balances else 0
+
+    # Compute days and attendance factor for earned amounts
+    days_in_month = calendar.monthrange(statement.year, statement.month)[1]
+    days_payable = (statement.present_days or 0) + (statement.leave_days or 0)
+    attendance_factor = days_payable / days_in_month if days_in_month > 0 else 1
+
+    # Compute per-component actual and earned amounts
+    basic_salary = float(statement.basic_salary or 0)
+    earnings_actual = {
+        "basic_salary": basic_salary,
+        "hra": float(earnings_breakdown.get("hra", 0)),
+        "conveyance_allowance": float(earnings_breakdown.get("conveyance_allowance", 0)),
+        "medical_allowance": float(earnings_breakdown.get("medical_allowance", 0)),
+        "special_allowance": float(earnings_breakdown.get("special_allowance", 0)),
+        "other_allowance": float(earnings_breakdown.get("other_allowances", earnings_breakdown.get("other_allowance", 0))),
+    }
+    earnings_earned = {k: round(v * attendance_factor, 2) for k, v in earnings_actual.items()}
+
+    emp_name = " ".join(filter(None, [employee.first_name, employee.middle_name, employee.last_name]))
+    bank_display = bank_name
+    if branch_name:
+        bank_display = f"{bank_name}, {branch_name}"
 
     return {
         "id": statement.id,
         "employee_id": statement.employee_id,
         "employee": {
             "code": employee.employee_code,
-            "name": f"{employee.first_name} {employee.last_name}",
+            "name": emp_name,
             "email": employee.email,
             "designation": designation_name,
-            "department": department_name
+            "department": department_name,
+            "date_of_joining": str(employee.date_of_joining) if employee.date_of_joining else "N/A",
+            "bank_name": bank_display,
+            "bank_account": bank_account,
+            "pan": pan_number,
+            "uan_number": uan_number,
+            "esi_number": esi_number,
+            "ctc": ctc
         },
         "period": {
             "month": statement.month,
             "year": statement.year
         },
         "attendance": {
-            "total_days": statement.total_days,
+            "days_in_month": days_in_month,
+            "days_payable": days_payable,
             "present_days": statement.present_days,
             "absent_days": statement.absent_days,
-            "leave_days": statement.leave_days
+            "leave_days": statement.leave_days,
+            "total_days": statement.total_days
+        },
+        "leave_details": {
+            "total_accumulated": int(total_accumulated),
+            "leaves_availed": int(total_used),
+            "balance_leaves": int(total_accumulated - total_used)
         },
         "earnings": {
-            "basic_salary": statement.basic_salary,
+            "basic_salary": basic_salary,
             "total_earnings": statement.total_earnings,
-            "breakdown": earnings_breakdown
+            "breakdown": earnings_breakdown,
+            "actual": earnings_actual,
+            "earned": earnings_earned
         },
         "deductions": {
             "total_deductions": statement.total_deductions,
@@ -456,32 +534,52 @@ def download_payslip(
     designation_name = employee.designation.name if employee.designation else "N/A"
     department_name = employee.department.name if employee.department else "N/A"
 
-    # Get bank and statutory details
+    # Get bank details
     bank_account = "N/A"
+    bank_name = "N/A"
+    branch_name = ""
     pan_number = "N/A"
-    pf_number = "N/A"
 
     if employee.bank_details:
-        bank_account = employee.bank_details.account_number
+        bank_account = employee.bank_details.account_number or "N/A"
+        bank_name = employee.bank_details.bank_name or "N/A"
+        branch_name = employee.bank_details.branch_name or ""
         if employee.bank_details.pan_number:
             pan_number = employee.bank_details.pan_number
+
+    # Get statutory details
+    uan_number = "N/A"
+    esi_number = "N/A"
 
     if employee.statutory_details:
         if employee.statutory_details.pan_number:
             pan_number = employee.statutory_details.pan_number
         if employee.statutory_details.uan_number:
-            pf_number = employee.statutory_details.uan_number
+            uan_number = employee.statutory_details.uan_number
+        if employee.statutory_details.esic_number:
+            esi_number = employee.statutory_details.esic_number
+
+    # Get CTC from salary details
+    ctc = 0
+    if employee.salary_details:
+        ctc = float(employee.salary_details.ctc or 0)
 
     employee_data = {
         "employee_code": employee.employee_code,
         "first_name": employee.first_name,
+        "middle_name": employee.middle_name or "",
         "last_name": employee.last_name,
         "designation": designation_name,
         "department": department_name,
         "date_of_joining": str(employee.date_of_joining) if employee.date_of_joining else "N/A",
         "bank_account": bank_account,
+        "bank_name": bank_name,
+        "branch_name": branch_name,
         "pan": pan_number,
-        "pf_number": pf_number
+        "pf_number": uan_number,
+        "uan_number": uan_number,
+        "esi_number": esi_number,
+        "ctc": ctc
     }
 
     tenant_data = {
@@ -489,11 +587,29 @@ def download_payslip(
         "address": tenant.address if tenant and hasattr(tenant, 'address') else "Company Address"
     }
 
+    # Get leave details for the employee
+    from app.models.leave import LeaveBalance
+    leave_balances = db.query(LeaveBalance).filter(
+        LeaveBalance.employee_id == employee_id,
+        LeaveBalance.year == year
+    ).all()
+
+    total_accumulated = sum(lb.total_days for lb in leave_balances) if leave_balances else 15
+    total_used = sum(lb.used_days for lb in leave_balances) if leave_balances else 0
+    balance_leaves = total_accumulated - total_used
+
+    leave_details = {
+        "total_accumulated": int(total_accumulated),
+        "leaves_availed": int(total_used),
+        "balance_leaves": int(balance_leaves)
+    }
+
     # Generate PDF
     pdf_buffer = PDFGenerator.generate_payslip(
         wage_statement=wage_data,
         employee_details=employee_data,
-        tenant_details=tenant_data
+        tenant_details=tenant_data,
+        leave_details=leave_details
     )
 
     # Return as downloadable file
@@ -788,32 +904,52 @@ def send_payslip_email(
     designation_name = employee.designation.name if employee.designation else "N/A"
     department_name = employee.department.name if employee.department else "N/A"
 
-    # Get bank and statutory details
+    # Get bank details
     bank_account = "N/A"
+    bank_name = "N/A"
+    branch_name = ""
     pan_number = "N/A"
-    pf_number = "N/A"
 
     if employee.bank_details:
-        bank_account = employee.bank_details.account_number
+        bank_account = employee.bank_details.account_number or "N/A"
+        bank_name = employee.bank_details.bank_name or "N/A"
+        branch_name = employee.bank_details.branch_name or ""
         if employee.bank_details.pan_number:
             pan_number = employee.bank_details.pan_number
+
+    # Get statutory details
+    uan_number = "N/A"
+    esi_number = "N/A"
 
     if employee.statutory_details:
         if employee.statutory_details.pan_number:
             pan_number = employee.statutory_details.pan_number
         if employee.statutory_details.uan_number:
-            pf_number = employee.statutory_details.uan_number
+            uan_number = employee.statutory_details.uan_number
+        if employee.statutory_details.esic_number:
+            esi_number = employee.statutory_details.esic_number
+
+    # Get CTC from salary details
+    ctc = 0
+    if employee.salary_details:
+        ctc = float(employee.salary_details.ctc or 0)
 
     employee_data = {
         "employee_code": employee.employee_code,
         "first_name": employee.first_name,
+        "middle_name": employee.middle_name or "",
         "last_name": employee.last_name,
         "designation": designation_name,
         "department": department_name,
         "date_of_joining": str(employee.date_of_joining) if employee.date_of_joining else "N/A",
         "bank_account": bank_account,
+        "bank_name": bank_name,
+        "branch_name": branch_name,
         "pan": pan_number,
-        "pf_number": pf_number
+        "pf_number": uan_number,
+        "uan_number": uan_number,
+        "esi_number": esi_number,
+        "ctc": ctc
     }
 
     tenant_data = {
@@ -821,11 +957,29 @@ def send_payslip_email(
         "address": tenant.address if tenant and hasattr(tenant, 'address') else "Company Address"
     }
 
+    # Get leave details for the employee
+    from app.models.leave import LeaveBalance
+    leave_balances = db.query(LeaveBalance).filter(
+        LeaveBalance.employee_id == employee_id,
+        LeaveBalance.year == year
+    ).all()
+
+    total_accumulated = sum(lb.total_days for lb in leave_balances) if leave_balances else 15
+    total_used = sum(lb.used_days for lb in leave_balances) if leave_balances else 0
+    balance_leaves = total_accumulated - total_used
+
+    leave_details = {
+        "total_accumulated": int(total_accumulated),
+        "leaves_availed": int(total_used),
+        "balance_leaves": int(balance_leaves)
+    }
+
     # Generate PDF
     pdf_buffer = PDFGenerator.generate_payslip(
         wage_statement=wage_data,
         employee_details=employee_data,
-        tenant_details=tenant_data
+        tenant_details=tenant_data,
+        leave_details=leave_details
     )
 
     # Send email

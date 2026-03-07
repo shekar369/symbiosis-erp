@@ -21,7 +21,7 @@ def create_superuser():
             db=db,
             username="admin",
             email="admin@example.com",
-            password="admin123",  # Change this in production
+            password="Test@1234",  # See Doc-refs/CREDENTIALS_AND_CONFIG.md
             tenant_id=1,
             role=ROLE_SUPER_ADMIN
         )

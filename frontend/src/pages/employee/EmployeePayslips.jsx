@@ -104,6 +104,29 @@ const EmployeePayslips = () => {
     }).format(amount || 0);
   };
 
+  const numberToWords = (num) => {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+      'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    if (!num || num === 0) return 'Zero Rupees Only';
+    const convertLessThanThousand = (n) => {
+      if (n < 20) return ones[n];
+      if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? '-' + ones[n % 10] : '');
+      return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + convertLessThanThousand(n % 100) : '');
+    };
+    const convertIndian = (n) => {
+      if (n < 1000) return convertLessThanThousand(n);
+      if (n < 100000) return convertLessThanThousand(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + convertLessThanThousand(n % 1000) : '');
+      if (n < 10000000) return convertLessThanThousand(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + convertIndian(n % 100000) : '');
+      return convertLessThanThousand(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + convertIndian(n % 10000000) : '');
+    };
+    const rupees = Math.floor(num);
+    const paise = Math.round((num - rupees) * 100);
+    let result = convertIndian(rupees) + ' Rupees';
+    if (paise > 0) result += ' and ' + convertIndian(paise) + ' Paise';
+    return result + ' Only';
+  };
+
   const getMonthName = (month) => {
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June',
@@ -386,132 +409,172 @@ const EmployeePayslips = () => {
                 </div>
               ) : selectedPayslip ? (
                 <>
-                  {/* Header */}
-                  <div className="bg-blue-600 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium text-white">
-                        Payslip Details - {getMonthName(selectedPayslip.period.month)} {selectedPayslip.period.year}
-                      </h3>
-                      <button
-                        onClick={() => setShowModal(false)}
-                        className="text-white hover:text-gray-200"
-                      >
-                        <Close className="w-6 h-6" />
-                      </button>
-                    </div>
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-gray-50">
+                    <h3 className="text-base font-bold text-gray-900">
+                      Salary Slip — {getMonthName(selectedPayslip.period.month)} {selectedPayslip.period.year}
+                    </h3>
+                    <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
+                      <Close className="w-5 h-5" />
+                    </button>
                   </div>
 
-                  {/* Content */}
-                  <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
-                    {/* Employee Info */}
-                    <div className="mb-6 bg-gray-50 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Employee Information</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-600">Employee Code:</span>
-                          <span className="ml-2 font-medium">{selectedPayslip.employee.code}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Name:</span>
-                          <span className="ml-2 font-medium">{selectedPayslip.employee.name}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Designation:</span>
-                          <span className="ml-2 font-medium">{selectedPayslip.employee.designation || 'N/A'}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Department:</span>
-                          <span className="ml-2 font-medium">{selectedPayslip.employee.department || 'N/A'}</span>
-                        </div>
-                      </div>
+                  {/* Content — mirrors PDF layout exactly */}
+                  <div className="px-6 py-4 max-h-[80vh] overflow-y-auto font-sans">
+
+                    {/* Payslip Title Bar */}
+                    <div className="bg-gray-100 border border-gray-300 text-center font-bold text-sm py-2 mb-0">
+                      Payslip For the Month of {getMonthName(selectedPayslip.period.month)} {selectedPayslip.period.year}
                     </div>
 
-                    {/* Attendance */}
-                    <div className="mb-6">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Attendance Summary</h4>
-                      <div className="grid grid-cols-4 gap-4">
-                        <div className="bg-blue-50 rounded-lg p-3 text-center">
-                          <div className="text-2xl font-bold text-blue-600">{selectedPayslip.attendance.total_days}</div>
-                          <div className="text-xs text-gray-600 mt-1">Total Days</div>
-                        </div>
-                        <div className="bg-green-50 rounded-lg p-3 text-center">
-                          <div className="text-2xl font-bold text-green-600">{selectedPayslip.attendance.present_days}</div>
-                          <div className="text-xs text-gray-600 mt-1">Present Days</div>
-                        </div>
-                        <div className="bg-red-50 rounded-lg p-3 text-center">
-                          <div className="text-2xl font-bold text-red-600">{selectedPayslip.attendance.absent_days}</div>
-                          <div className="text-xs text-gray-600 mt-1">Absent Days</div>
-                        </div>
-                        <div className="bg-yellow-50 rounded-lg p-3 text-center">
-                          <div className="text-2xl font-bold text-yellow-600">{selectedPayslip.attendance.leave_days}</div>
-                          <div className="text-xs text-gray-600 mt-1">Leave Days</div>
-                        </div>
-                      </div>
-                    </div>
+                    {/* Employee Info Table — 6 rows × 4 cols matching PDF */}
+                    <table className="w-full border-collapse text-xs">
+                      <tbody>
+                        <tr>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 w-[22%]">Employee ID</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5 w-[28%]">{selectedPayslip.employee.code}</td>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 w-[22%]">Bank Name</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5 w-[28%]">{selectedPayslip.employee.bank_name || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">Employee Name</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5">{selectedPayslip.employee.name}</td>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">Account No.</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5">{selectedPayslip.employee.bank_account || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">Department</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5">{selectedPayslip.employee.department || 'N/A'}</td>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">PAN Card No.</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5">{selectedPayslip.employee.pan || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">Designation</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5">{selectedPayslip.employee.designation || 'N/A'}</td>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">UAN No.</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5">{selectedPayslip.employee.uan_number || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">Days in Month</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5">{selectedPayslip.attendance.days_in_month}</td>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">ESI No.</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5">{selectedPayslip.employee.esi_number || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">Days Payable</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5">{selectedPayslip.attendance.days_payable}</td>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">CTC per Month</td>
+                          <td className="bg-white border border-gray-300 px-2 py-1.5">
+                            Rs. {new Intl.NumberFormat('en-IN').format(Math.round(selectedPayslip.employee.ctc || 0))}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
 
-                    {/* Earnings and Deductions */}
-                    <div className="grid grid-cols-2 gap-6 mb-6">
-                      {/* Earnings */}
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Earnings</h4>
-                        <div className="bg-green-50 rounded-lg p-4">
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-700">Basic Salary:</span>
-                              <span className="font-medium">{formatCurrency(selectedPayslip.earnings.basic_salary)}</span>
-                            </div>
-                            {selectedPayslip.earnings.breakdown && Object.entries(selectedPayslip.earnings.breakdown).map(([key, value]) => (
-                              value > 0 && (
-                                <div key={key} className="flex justify-between text-sm">
-                                  <span className="text-gray-700">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
-                                  <span className="font-medium">{formatCurrency(value)}</span>
-                                </div>
-                              )
-                            ))}
-                            <div className="pt-2 mt-2 border-t border-green-200">
-                              <div className="flex justify-between text-sm font-bold">
-                                <span className="text-gray-700">Total Earnings:</span>
-                                <span className="text-green-600">{formatCurrency(selectedPayslip.earnings.total_earnings)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                    {/* Leave Row — 3 cells matching PDF */}
+                    <table className="w-full border-collapse text-xs">
+                      <tbody>
+                        <tr>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 text-center w-1/3">
+                            Total Leaves Accumulated: {selectedPayslip.leave_details?.total_accumulated ?? 'N/A'}
+                          </td>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 text-center w-1/3">
+                            Leaves Availed: {selectedPayslip.leave_details?.leaves_availed ?? 'N/A'}
+                          </td>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 text-center w-1/3">
+                            Balance Leaves: {selectedPayslip.leave_details?.balance_leaves ?? 'N/A'}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
 
-                      {/* Deductions */}
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Deductions</h4>
-                        <div className="bg-red-50 rounded-lg p-4">
-                          <div className="space-y-2">
-                            {selectedPayslip.deductions.breakdown && Object.entries(selectedPayslip.deductions.breakdown).map(([key, value]) => (
-                              value > 0 && (
-                                <div key={key} className="flex justify-between text-sm">
-                                  <span className="text-gray-700">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
-                                  <span className="font-medium">{formatCurrency(value)}</span>
-                                </div>
-                              )
-                            ))}
-                            {(!selectedPayslip.deductions.breakdown || Object.keys(selectedPayslip.deductions.breakdown).length === 0) && (
-                              <div className="text-sm text-gray-500 text-center py-2">No deductions</div>
-                            )}
-                            <div className="pt-2 mt-2 border-t border-red-200">
-                              <div className="flex justify-between text-sm font-bold">
-                                <span className="text-gray-700">Total Deductions:</span>
-                                <span className="text-red-600">{formatCurrency(selectedPayslip.deductions.total_deductions)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    {/* Earnings & Deductions — 5-column table matching PDF */}
+                    {(() => {
+                      const actual = selectedPayslip.earnings.actual || {};
+                      const earned = selectedPayslip.earnings.earned || {};
+                      const deductionsBreakdown = selectedPayslip.deductions.breakdown || {};
 
-                    {/* Net Salary */}
-                    <div className="bg-blue-600 rounded-lg p-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-white text-lg font-semibold">Net Salary (Take Home):</span>
-                        <span className="text-white text-2xl font-bold">{formatCurrency(selectedPayslip.net_salary)}</span>
-                      </div>
-                    </div>
+                      const fmt = (v) => v > 0 ? new Intl.NumberFormat('en-IN').format(Math.round(v)) : '—';
+
+                      const earningRows = [
+                        { label: 'Basic Salary', key: 'basic_salary' },
+                        { label: 'HRA', key: 'hra' },
+                        { label: 'Conveyance Allowance', key: 'conveyance_allowance' },
+                        { label: 'Medical Allowance', key: 'medical_allowance' },
+                        { label: 'Special Allowance', key: 'special_allowance' },
+                        { label: 'Other Allowance', key: 'other_allowance' },
+                      ];
+
+                      const deductionRows = [
+                        { label: 'EPF Contribution', key: 'pf_employee' },
+                        { label: 'ESI Contribution', key: 'esi_employee' },
+                        { label: 'Professional Tax', key: 'professional_tax' },
+                        { label: 'TDS', key: 'tds' },
+                        { label: 'Advance', key: 'advance_deduction' },
+                        { label: 'Other Deductions', key: 'other_deductions' },
+                      ];
+
+                      const grossActual = earningRows.reduce((s, r) => s + (actual[r.key] || 0), 0);
+                      const grossEarned = earningRows.reduce((s, r) => s + (earned[r.key] || 0), 0);
+                      const totalDeductions = deductionRows.reduce((s, r) => s + (deductionsBreakdown[r.key] || 0), 0);
+
+                      return (
+                        <table className="w-full border-collapse text-xs">
+                          <thead>
+                            <tr>
+                              <th className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 text-left w-[28%]">EARNINGS</th>
+                              <th className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 text-right w-[15%]">Actual (Rs.)</th>
+                              <th className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 text-right w-[15%]">Earned (Rs.)</th>
+                              <th className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 text-left w-[27%]">DEDUCTIONS</th>
+                              <th className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 text-right w-[15%]">Amount (Rs.)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {earningRows.map((er, i) => {
+                              const dr = deductionRows[i];
+                              return (
+                                <tr key={i}>
+                                  <td className="bg-gray-50 border border-gray-300 px-2 py-1.5">{er.label}</td>
+                                  <td className="bg-white border border-gray-300 px-2 py-1.5 text-right">{fmt(actual[er.key] || 0)}</td>
+                                  <td className="bg-white border border-gray-300 px-2 py-1.5 text-right">{fmt(earned[er.key] || 0)}</td>
+                                  <td className="bg-gray-50 border border-gray-300 px-2 py-1.5">{dr.label}</td>
+                                  <td className="bg-white border border-gray-300 px-2 py-1.5 text-right">{fmt(deductionsBreakdown[dr.key] || 0)}</td>
+                                </tr>
+                              );
+                            })}
+                            <tr>
+                              <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">Gross Salary</td>
+                              <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 text-right">{fmt(grossActual)}</td>
+                              <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 text-right">{fmt(grossEarned)}</td>
+                              <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5">Total Deductions</td>
+                              <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-1.5 text-right">{fmt(totalDeductions)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      );
+                    })()}
+
+                    {/* Net Salary + In Words — connected 2-row table matching PDF */}
+                    <table className="w-full border-collapse text-xs">
+                      <tbody>
+                        <tr>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-2 w-[27%]">Net Salary</td>
+                          <td className="bg-white font-bold border border-gray-300 px-2 py-2 text-right text-sm">
+                            Rs. {new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2 }).format(selectedPayslip.net_salary)}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="bg-gray-100 font-bold border border-gray-300 px-2 py-2 whitespace-nowrap">Net Salary in Words</td>
+                          <td className="bg-white border border-gray-300 px-2 py-2 italic">
+                            {numberToWords(selectedPayslip.net_salary)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <p className="text-gray-400 text-xs italic mt-2">
+                      This is a computer generated document, no signature required.
+                    </p>
                   </div>
 
                   {/* Footer */}

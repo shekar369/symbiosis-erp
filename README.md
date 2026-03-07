@@ -228,10 +228,10 @@ The following test accounts are available in the database:
 
 | Username | Password | Role | Tenant | Full Name | Access Level |
 |----------|----------|------|--------|-----------|--------------|
-| `admin` | `admin123` | System Admin | 1 (Test Company) | Test Admin | Full system administration |
-| `employer` | `employer123` | Employer Admin | 2 (Tech Innovate) | Ravi Krishnan | Complete HR/Payroll management |
-| `hrmanager` | `hr_manager123` | HR Manager | 2 (Tech Innovate) | Meera Lakshmi | HR operations & employee management |
-| `employee` | `employee123` | Employee | 2 (Tech Innovate) | Rajesh Kumar | Self-service portal access |
+| `admin` | `Test@1234` | System Admin | 1 (Test Company) | Test Admin | Full system administration |
+| `employer` | `Test@1234` | Employer Admin | 2 (Tech Innovate) | Ravi Krishnan | Complete HR/Payroll management |
+| `hrmanager` | `Test@1234` | HR Manager | 2 (Tech Innovate) | Meera Lakshmi | HR operations & employee management |
+| `employee` | `Test@1234` | Employee | 2 (Tech Innovate) | Rajesh Kumar | Self-service portal access |
 
 **Test Data Available:**
 - 2 Tenants configured

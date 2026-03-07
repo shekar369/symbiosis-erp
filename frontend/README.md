@@ -27,7 +27,9 @@ npm run dev
 ## Default Login
 
 - Username: `admin`
-- Password: `admin123`
+- Password: `Test@1234`
+
+> See `Doc-refs/CREDENTIALS_AND_CONFIG.md` for all credentials and config reference.
 
 ## Features
 

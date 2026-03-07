@@ -23,24 +23,26 @@ import EmployeeLeave from './pages/employee/EmployeeLeave';
 import EmployeeProfile from './pages/employee/EmployeeProfile';
 import PayrollDashboard from './pages/employer/PayrollDashboard';
 import HolidayCalendar from './pages/employer/HolidayCalendar';
+import SaasAdminDashboard from './pages/saas-admin/SaasAdminDashboard';
+import Registrations from './pages/saas-admin/Registrations';
 
 function App() {
   return (
     <AuthProvider>
       <ConfigProvider>
         <Routes>
-            <Route path="/login" element={<Login />} />
-            
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<EmployerDashboard />} />
+          <Route path="/login" element={<Login />} />
+
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<EmployerDashboard />} />
             <Route path="dashboard-old" element={<Dashboard />} />
             <Route path="employees" element={<Employees />} />
             <Route path="employees/:id" element={<EmployeeDetail />} />
@@ -55,7 +57,9 @@ function App() {
             <Route path="leaves" element={<Leaves />} />
             <Route path="reports" element={<Reports />} />
 
-            {/* Admin Routes */}
+            {/* SaaS Admin Routes */}
+            <Route path="admin/dashboard" element={<SaasAdminDashboard />} />
+            <Route path="admin/registrations" element={<Registrations />} />
             <Route path="admin/config" element={<SystemConfig />} />
 
             {/* Employee Routes */}

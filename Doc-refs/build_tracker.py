@@ -171,7 +171,7 @@ header_row(ws1, 12,
 
 stakeholder_summary = [
     # stakeholder, total, complete, in_progress, not_started, pct, approval, priority, notes
-    ("SaaS Admin",      7,  4, 2, 1, 57,  "In Review",   "High",   "Tenant & billing mgmt core done"),
+    ("SaaS Admin",      7,  5, 1, 1, 71,  "In Review",   "High",   "Registration management + admin dashboard complete"),
     ("Employer/HR",     23, 14, 6, 3, 61,  "In Review",   "High",   "Payroll & leave done; reports pending"),
     ("Employee",        9,  7, 1, 1, 78,  "Approved",    "High",   "Self-service portal mostly complete"),
     ("Auditor",         5,  2, 1, 2, 40,  "Pending",     "Medium", "Audit trail & reports partially done"),
@@ -354,10 +354,10 @@ saas_features = [
          client_approval="In Review",  priority="High",   notes="API complete; SaaS admin UI partial"),
     dict(module="Tenant Management", feature="Tenant Dashboard",           description="Tenant KPIs and overview",
          backend_status="Complete",    frontend_status="Complete",          overall_status="Complete",
-         client_approval="In Review",  priority="High",   notes=""),
+         client_approval="In Review",  priority="High",   notes="Rebuilt with Tailwind (removed broken shadcn deps)"),
     dict(module="Registration",      feature="Organisation Registration",  description="New org registration with review workflow",
-         backend_status="Complete",    frontend_status="Not Started",       overall_status="API Ready / UI Pending",
-         client_approval="Pending",    priority="High",   notes="Backend + review endpoints done; no UI page yet"),
+         backend_status="Complete",    frontend_status="Complete",          overall_status="Complete",
+         client_approval="In Review",  priority="High",   notes="Full page: list, search, filter, detail modal, approve/reject"),
     dict(module="Billing",           feature="Subscription Plans CRUD",   description="Create, list, update pricing plans",
          backend_status="Complete",    frontend_status="Not Started",       overall_status="API Ready / UI Pending",
          client_approval="Pending",    priority="Medium", notes="BillingComponents.jsx stub exists"),
@@ -565,7 +565,10 @@ t.alignment = align(h="center"); wsc.row_dimensions[2].height = 28
 
 header_row(wsc, 3, ["","Date","Version","Stakeholder","Feature / Change","Status","Updated By","Notes"], fg=C_SUBHDR_BG, height=20)
 
-changelog = [
+changelog = [    ("2026-03-08", "v1.6", "SaaS Admin",     "Organisation Registrations page: list, filter, search, approve/reject modal", "Complete",   "Claude AI", "New page: frontend/src/pages/saas-admin/Registrations.jsx"),
+    ("2026-03-08", "v1.6", "SaaS Admin",     "SaaS Admin Dashboard rebuilt with Tailwind (removed broken shadcn UI)",       "Complete",   "Claude AI", "SaasAdminDashboard.jsx + fixed admin.py registration stats"),
+    ("2026-03-08", "v1.6", "System/Platform","Sidebar: SaaS Admin menu section added with role-aware rendering",            "Complete",   "Claude AI", "Admin, Employer, Employee sections in Sidebar.jsx"),
+
     ("2026-03-08", "v1.5", "Employer/HR",     "Payslip PDF redesign — Indian currency words, bank/UAN/ESI data", "Complete",   "Claude AI", "Matches reference payslip format"),
     ("2026-03-08", "v1.5", "Employee",         "EmployeePayslips.jsx — enhanced data display with new API fields", "Complete",   "Claude AI", ""),
     ("2026-03-08", "v1.5", "System/Platform",  "CORS fix: 127.0.0.1 → localhost, axios fallback port 8001→8000",  "Complete",   "Claude AI", ""),

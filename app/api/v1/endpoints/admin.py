@@ -82,14 +82,7 @@ async def saas_admin_dashboard(
         .limit(5)
         .all()
     )
-    
-    recent_invoices = (
-        db.query(BillingInvoice)
-        .order_by(BillingInvoice.created_at.desc())
-        .limit(5)
-        .all()
-    )
-    
+
     return {
         "dashboard_data": {
             "tenant_stats": {
@@ -101,14 +94,17 @@ async def saas_admin_dashboard(
                 "total_users": total_users,
                 "by_role": user_by_role
             },
+            "registration_stats": registration_stats,
             "recent_registrations": [
                 {
-                    "id": user.id,
-                    "username": user.username,
-                    "email": user.email,
-                    "created_at": user.created_at
+                    "id": reg.id,
+                    "name": reg.name,
+                    "email": reg.email,
+                    "contact_person": reg.contact_person,
+                    "status": reg.status,
+                    "created_at": str(reg.created_at)
                 }
-                for user in recent_registrations
+                for reg in recent_registrations
             ]
         },
         "user": {
@@ -117,7 +113,6 @@ async def saas_admin_dashboard(
             "role": current_user.role
         }
     }
-
 @router.get("/employer/dashboard")
 async def employer_dashboard(
     current_user: User = Depends(get_employer_admin),

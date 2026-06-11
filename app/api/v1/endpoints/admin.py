@@ -149,29 +149,94 @@ async def auditor_dashboard(
         "tenant_id": current_user.tenant_id
     }
 
-# User management endpoints
+from pydantic import BaseModel as _BaseModel
+
+
+class UserCreateRequest(_BaseModel):
+    username: str
+    email: str
+    password: str
+    role: str
+    full_name: str = None
+    tenant_id: int = None
+
+
 @router.get("/users")
 async def list_users(
+    skip: int = 0,
+    limit: int = 50,
+    role: str = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_saas_admin)
+    current_user: User = Depends(get_saas_admin),
 ):
-    if not current_user.is_superuser and current_user.role != "saas_admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access user management"
-        )
-    # TODO: Implement user listing
-    return {"message": "User management - to be implemented"}
+    """List all users across all tenants (SaaS admin only)."""
+    query = db.query(User)
+    if role:
+        query = query.filter(User.role == role)
+    users = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+    total = db.query(User).count()
+    return {
+        "total": total,
+        "users": [
+            {
+                "id": u.id,
+                "username": u.username,
+                "email": u.email,
+                "role": u.role,
+                "full_name": u.full_name,
+                "is_active": u.is_active,
+                "tenant_id": u.tenant_id,
+                "created_at": str(u.created_at),
+            }
+            for u in users
+        ],
+    }
 
-@router.post("/users")
+
+@router.post("/users", status_code=status.HTTP_201_CREATED)
 async def create_user(
+    payload: UserCreateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_saas_admin)
+    current_user: User = Depends(get_saas_admin),
 ):
-    if not current_user.is_superuser and current_user.role != "saas_admin":
+    """Create a new user (SaaS admin only)."""
+    from app.crud.user import user as user_crud
+    from app.core.security import get_password_hash
+
+    if user_crud.get_user_by_username(db, payload.username):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to create users"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username already exists",
         )
-    # TODO: Implement user creation
-    return {"message": "User creation - to be implemented"}
+    if user_crud.get_user_by_email(db, payload.email):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered",
+        )
+
+    valid_roles = ["saas_admin", "employer_admin", "employee", "auditor"]
+    if payload.role not in valid_roles:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid role. Must be one of: {valid_roles}",
+        )
+
+    new_user = User(
+        username=payload.username,
+        email=payload.email,
+        hashed_password=get_password_hash(payload.password),
+        role=payload.role,
+        full_name=payload.full_name,
+        tenant_id=payload.tenant_id,
+        is_active=True,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return {
+        "id": new_user.id,
+        "username": new_user.username,
+        "email": new_user.email,
+        "role": new_user.role,
+        "tenant_id": new_user.tenant_id,
+    }

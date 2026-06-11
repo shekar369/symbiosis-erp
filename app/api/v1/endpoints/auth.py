@@ -57,7 +57,72 @@ async def login(
     }
 
 
-@router.post("/register")
-async def register(db: Session = Depends(get_db)):
-    # TODO: Implement user registration
-    return {"message": "Registration endpoint - to be implemented"}
+from pydantic import BaseModel as _BaseModel, EmailStr
+
+
+class UserRegisterRequest(_BaseModel):
+    username: str
+    email: str
+    password: str
+    full_name: str = None
+    tenant_id: int = None
+    role: str = "employee"
+
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+async def register(payload: UserRegisterRequest, db: Session = Depends(get_db)):
+    """
+    Self-service registration endpoint.
+    Creates an employee-role user by default; higher roles must be set by a SaaS admin.
+    """
+    from app.crud.user import user as user_crud
+    from app.core.security import get_password_hash
+    from app.models.user import User as UserModel
+
+    if user_crud.get_user_by_username(db, payload.username):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username already taken",
+        )
+    if user_crud.get_user_by_email(db, payload.email):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered",
+        )
+
+    # Restrict self-registration to employee and auditor roles only
+    allowed_roles = {"employee", "auditor"}
+    role = payload.role if payload.role in allowed_roles else "employee"
+
+    new_user = UserModel(
+        username=payload.username,
+        email=payload.email,
+        hashed_password=get_password_hash(payload.password),
+        full_name=payload.full_name,
+        role=role,
+        tenant_id=payload.tenant_id,
+        is_active=True,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    access_token = create_access_token(
+        data={
+            "sub": new_user.username,
+            "role": new_user.role,
+            "is_superuser": False,
+            "tenant_id": new_user.tenant_id,
+        }
+    )
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": new_user.id,
+            "username": new_user.username,
+            "email": new_user.email,
+            "role": new_user.role,
+            "tenant_id": new_user.tenant_id,
+        },
+    }

@@ -55,9 +55,35 @@ const EmployerDashboard = () => {
         exitedEmployees: exited,
       }));
 
-      // Fetch attendance stats (today)
-      const today = new Date().toISOString().split('T')[0];
-      // TODO: Add attendance API call when available
+      // Fetch live attendance stats for today
+      const today = new Date();
+      const month = today.getMonth() + 1;
+      const yearNum = today.getFullYear();
+      try {
+        const attendanceRes = await api.get(
+          `/reports/attendance?month=${month}&year=${yearNum}`
+        );
+        const records = attendanceRes.data?.records || [];
+        const presentToday = records.reduce((sum, r) => sum + (r.present || 0), 0);
+        const totalWithRecords = records.filter(r => r.total_recorded > 0).length;
+        const pct = totalWithRecords > 0 ? Math.round((presentToday / totalWithRecords) * 100) : 0;
+        setStats(prev => ({
+          ...prev,
+          presentToday,
+          attendancePercentage: pct,
+        }));
+      } catch {
+        // Attendance data not yet available for this period — leave defaults
+      }
+
+      // Fetch pending leave count
+      try {
+        const leaveRes = await api.get('/leave/requests?status=pending&limit=1');
+        const pendingLeaves = leaveRes.data?.total ?? leaveRes.data?.length ?? 0;
+        setStats(prev => ({ ...prev, pendingLeaves }));
+      } catch {
+        // Leave endpoint may not expose total — skip
+      }
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
